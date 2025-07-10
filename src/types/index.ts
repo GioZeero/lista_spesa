@@ -34,6 +34,8 @@ export type DietPlan = {
   week: WeekPlan;
 };
 
+export type Freshness = 'green' | 'yellow' | 'red';
+
 // Rappresenta un articolo nella lista della spesa finale
 export type ShoppingItem = {
   id: string;
@@ -41,4 +43,5 @@ export type ShoppingItem = {
   quantity: number;
   unit: string;
   prices: Partial<Record<Store, number>>;
+  freshness: Freshness;
 };

@@ -54,11 +54,9 @@ export default function Home() {
   const [diet, setDiet] = useState<DietPlan>(initialDiet);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
     setCurrentYear(new Date().getFullYear());
   }, []);
 
@@ -96,6 +94,7 @@ export default function Home() {
         quantity: parseFloat(quantityInKg.toFixed(2)),
         unit: 'kg',
         prices: itemPrices[name] || {},
+        freshness: 'green',
       }
     });
 
@@ -172,12 +171,10 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
             <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
           </div>
-          {isClient && (
-            <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-              <span>Costo Totale:</span>
-              <span>€{totalCost}</span>
-            </div>
-          )}
+          <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+            <span>Costo Totale:</span>
+            <span>€{totalCost}</span>
+          </div>
         </div>
 
         {shoppingList.length > 0 ? (

@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ShoppingCart, Trash2, Pencil } from "lucide-react";
-import type { ShoppingItem, Store } from "@/types";
+import { ShoppingCart, Trash2, Pencil } from "lucide-react";
+import type { ShoppingItem, Store, Freshness } from "@/types";
 import { stores } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 interface ShoppingListItemProps {
   item: ShoppingItem;
@@ -29,12 +30,19 @@ interface ShoppingListItemProps {
   onDelete: (id: string) => void;
 }
 
+const freshnessConfig: Record<Freshness, { color: string; label: string }> = {
+  green: { color: 'bg-green-500', label: 'Fresco (> 6 giorni)' },
+  yellow: { color: 'bg-yellow-500', label: 'In scadenza (3-6 giorni)' },
+  red: { color: 'bg-red-500', label: 'Urgente (< 3 giorni)' },
+};
+
 export function ShoppingListItemCard({
   item,
   onUpdate,
   onDelete,
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices);
+  const [freshness, setFreshness] = useState<Freshness>(item.freshness);
 
   const handlePriceChange = (store: Store, value: string) => {
     const newPrice = value === "" ? undefined : parseFloat(value);
@@ -43,6 +51,11 @@ export function ShoppingListItemCard({
     onUpdate({ ...item, prices: newPrices });
   };
   
+  const handleFreshnessChange = (newFreshness: Freshness) => {
+    setFreshness(newFreshness);
+    onUpdate({ ...item, freshness: newFreshness });
+  };
+
   const autoSelectedStore = useMemo(() => {
     const validPrices = Object.entries(prices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
@@ -75,11 +88,14 @@ export function ShoppingListItemCard({
         <Card className="flex flex-col rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1">
           <div className="flex flex-col p-6">
              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <h3 className="text-xl font-bold">{item.name}</h3>
-                    <p className="font-medium text-primary">
-                      {item.quantity} {item.unit}
-                    </p>
+                <div className="flex flex-1 items-center gap-3">
+                    <span className={cn("h-3 w-3 rounded-full flex-shrink-0", freshnessConfig[freshness].color)}></span>
+                    <div>
+                      <h3 className="text-xl font-bold">{item.name}</h3>
+                      <p className="font-medium text-primary">
+                        {item.quantity} {item.unit}
+                      </p>
+                    </div>
                 </div>
                 <Button
                     variant="ghost"
@@ -105,32 +121,54 @@ export function ShoppingListItemCard({
 
           <AccordionTrigger className="group justify-start px-6 py-2 text-sm text-muted-foreground hover:no-underline">
             <div className="flex items-center gap-1">
-                <Pencil className="h-3 w-3" /> Modifica Prezzi
+                <Pencil className="h-3 w-3" /> Modifica
             </div>
           </AccordionTrigger>
 
           <AccordionContent>
-            <div className="px-6 pb-6 pt-0 space-y-3">
-                <p className="text-xs text-muted-foreground">Modifica i prezzi al kg per ogni negozio.</p>
-                {stores.map((store) => (
-                  <div key={store} className="flex items-center gap-3">
-                    <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-sm font-medium">
-                      {store}
-                    </Label>
-                    <div className="relative w-28">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
-                      <Input
-                        id={`${item.id}-${store}`}
-                        type="number"
-                        step="0.01"
-                        value={prices[store] ?? ""}
-                        onChange={(e) => handlePriceChange(store, e.target.value)}
-                        placeholder="0.00"
-                        className="pl-6 text-right"
-                      />
+            <div className="px-6 pb-6 pt-0 space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2">Modifica i prezzi al kg per ogni negozio.</p>
+                  <div className="space-y-3">
+                  {stores.map((store) => (
+                    <div key={store} className="flex items-center gap-3">
+                      <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-sm font-medium">
+                        {store}
+                      </Label>
+                      <div className="relative w-28">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                        <Input
+                          id={`${item.id}-${store}`}
+                          type="number"
+                          step="0.01"
+                          value={prices[store] ?? ""}
+                          onChange={(e) => handlePriceChange(store, e.target.value)}
+                          placeholder="0.00"
+                          className="pl-6 text-right"
+                        />
+                      </div>
                     </div>
+                  ))}
                   </div>
-                ))}
+                </div>
+                <Separator />
+                <div>
+                   <p className="text-xs text-muted-foreground mb-2">Imposta la freschezza del prodotto.</p>
+                   <div className="flex items-center justify-between gap-2">
+                      {(['green', 'yellow', 'red'] as Freshness[]).map((level) => (
+                         <Button
+                            key={level}
+                            variant={freshness === level ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handleFreshnessChange(level)}
+                            className="flex-1"
+                         >
+                           <span className={cn("h-3 w-3 rounded-full mr-2", freshnessConfig[level].color)}></span>
+                           {freshnessConfig[level].label.split('(')[0].trim()}
+                         </Button>
+                      ))}
+                   </div>
+                </div>
             </div>
           </AccordionContent>
         </Card>
