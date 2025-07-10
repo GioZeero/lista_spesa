@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, ShoppingCart } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,11 @@ const initialItems: ShoppingItem[] = [
 export default function Home() {
   const [items, setItems] = useState<ShoppingItem[]>(initialItems);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   const handleAddItem = (item: Omit<ShoppingItem, 'id' | 'prices'>) => {
     setItems((prevItems) => [
@@ -125,7 +130,7 @@ export default function Home() {
       </main>
 
       <footer className="py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} SpesaIntelligente. Tutti i diritti riservati.
+        © {currentYear} SpesaIntelligente. Tutti i diritti riservati.
       </footer>
     </div>
   );
