@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ShoppingCart, Pencil } from "lucide-react";
+import { ShoppingCart, Pencil, Lightbulb } from "lucide-react";
 import type { ShoppingItem, Store, Freshness } from "@/types";
 import { stores } from "@/types";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,10 @@ export function ShoppingListItemCard({
     setFreshness(newFreshness);
     onUpdate({ ...item, freshness: newFreshness });
   };
+  
+  const handleHighlightToggle = () => {
+    onUpdate({ ...item, isHighlighted: !item.isHighlighted });
+  };
 
   const autoSelectedStore = useMemo(() => {
     const validPrices = Object.entries(prices)
@@ -83,7 +87,10 @@ export function ShoppingListItemCard({
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value={item.id} className="border-none">
-        <Card className="flex flex-col rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1">
+        <Card className={cn(
+            "flex flex-col rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-1",
+            item.isHighlighted && "shadow-lg shadow-primary/40 ring-2 ring-primary/80"
+          )}>
           <div className="flex flex-col p-6">
              <div className="flex items-start justify-between">
                 <div className="flex flex-1 items-center gap-3">
@@ -95,6 +102,9 @@ export function ShoppingListItemCard({
                       </p>
                     </div>
                 </div>
+                 <Button variant="ghost" size="icon" onClick={handleHighlightToggle} className="h-8 w-8 -mr-2 -mt-2 text-muted-foreground hover:text-amber-500">
+                    <Lightbulb className={cn("h-5 w-5", item.isHighlighted && "text-amber-400 fill-amber-300/80")} />
+                </Button>
             </div>
             
             <div className="mt-4 flex w-full items-center justify-between rounded-lg bg-muted p-3 text-center">
@@ -108,9 +118,9 @@ export function ShoppingListItemCard({
             </div>
           </div>
 
-          <AccordionTrigger className="group justify-start px-6 py-2 text-sm text-muted-foreground hover:no-underline [&>svg]:hidden">
+          <AccordionTrigger className="group justify-start px-6 py-2 text-sm text-muted-foreground hover:no-underline [&>svg]:-rotate-180">
             <div className="flex items-center gap-1">
-                <Pencil className="h-3 w-3" /> Modifica
+                <Pencil className="h-3 w-3" /> Modifica Dettagli
             </div>
           </AccordionTrigger>
 

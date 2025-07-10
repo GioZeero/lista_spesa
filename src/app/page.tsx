@@ -95,6 +95,7 @@ export default function Home() {
         unit: 'kg',
         prices: itemPrices[name] || {},
         freshness: 'green',
+        isHighlighted: false,
       }
     });
 

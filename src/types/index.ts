@@ -44,4 +44,5 @@ export type ShoppingItem = {
   unit: string;
   prices: Partial<Record<Store, number>>;
   freshness: Freshness;
+  isHighlighted: boolean;
 };
