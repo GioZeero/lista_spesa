@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ShoppingCart, Trash2, Pencil } from "lucide-react";
+import { ShoppingCart, Pencil } from "lucide-react";
 import type { ShoppingItem, Store, Freshness } from "@/types";
 import { stores } from "@/types";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,6 @@ import { Separator } from "@/components/ui/separator";
 interface ShoppingListItemProps {
   item: ShoppingItem;
   onUpdate: (item: ShoppingItem) => void;
-  onDelete: (id: string) => void;
 }
 
 const freshnessConfig: Record<Freshness, { color: string; label: string }> = {
@@ -39,7 +38,6 @@ const freshnessConfig: Record<Freshness, { color: string; label: string }> = {
 export function ShoppingListItemCard({
   item,
   onUpdate,
-  onDelete,
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices);
   const [freshness, setFreshness] = useState<Freshness>(item.freshness);
@@ -97,15 +95,6 @@ export function ShoppingListItemCard({
                       </p>
                     </div>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive rounded-full"
-                    onClick={() => onDelete(item.id)}
-                    >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Elimina Articolo</span>
-                </Button>
             </div>
             
             <div className="mt-4 flex w-full items-center justify-between rounded-lg bg-muted p-3 text-center">
@@ -119,7 +108,7 @@ export function ShoppingListItemCard({
             </div>
           </div>
 
-          <AccordionTrigger className="group justify-start px-6 py-2 text-sm text-muted-foreground hover:no-underline">
+          <AccordionTrigger className="group justify-start px-6 py-2 text-sm text-muted-foreground hover:no-underline [&>svg]:hidden">
             <div className="flex items-center gap-1">
                 <Pencil className="h-3 w-3" /> Modifica
             </div>

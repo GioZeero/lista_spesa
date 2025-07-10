@@ -109,10 +109,6 @@ export default function Home() {
     );
   };
 
-  const handleDeleteItem = (id: string) => {
-    setShoppingList((prevItems) => prevItems.filter((item) => item.id !== id));
-  };
-
   const handleSaveDiet = (newDiet: DietPlan) => {
     setDiet(newDiet);
     setIsSheetOpen(false);
@@ -184,7 +180,6 @@ export default function Home() {
                 key={item.id}
                 item={item}
                 onUpdate={handleUpdateItem}
-                onDelete={handleDeleteItem}
               />
             ))}
           </div>
