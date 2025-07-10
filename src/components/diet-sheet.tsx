@@ -219,12 +219,9 @@ function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
               onChange={(e) => onUpdate({ ...item, quantity: parseFloat(e.target.value) || 0 })}
               className="w-20"
             />
-            <Input
-              placeholder="Unità"
-              value={item.unit}
-              onChange={(e) => onUpdate({ ...item, unit: e.target.value })}
-              className="w-20"
-            />
+            <div className="w-20 flex items-center justify-center">
+              <span className="text-sm text-muted-foreground">{item.unit}</span>
+            </div>
             <Button variant="ghost" size="icon" onClick={onDelete}>
                 <Trash2 className="w-4 h-4 text-muted-foreground" />
             </Button>
