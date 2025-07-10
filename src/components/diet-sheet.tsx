@@ -5,7 +5,6 @@ import { Plus, Trash2, Copy } from "lucide-react";
 import type { DietPlan, DayType, DietFoodItem, WeekPlan } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Sheet,
   SheetContent,
@@ -169,7 +168,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
                <div className="grid grid-cols-1 gap-4">
                  {WEEK_DAYS.map(({key, label}) => (
                    <div key={key} className="flex items-center justify-between gap-4">
-                      <Label htmlFor={`day-select-${key}`} className="font-medium text-base w-24">{label}</Label>
+                      <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
                       <Select
                         value={week[key] ?? "none"}
                         onValueChange={(value) => handleWeekDayChange(key, value)}
