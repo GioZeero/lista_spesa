@@ -8,5 +8,5 @@ export type ShoppingItem = {
   quantity: number;
   unit: string;
   prices: Partial<Record<Store, number>>;
-  selectedStore?: Store | null;
+  selectedStore?: Store | null; // This can be removed if not used elsewhere, but keeping it is safe
 };

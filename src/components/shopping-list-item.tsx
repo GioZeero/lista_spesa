@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useId } from "react";
-import { Trash2, CheckCircle2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Trash2 } from "lucide-react";
 import type { ShoppingItem, Store } from "@/types";
 import { stores } from "@/types";
+import { cn } from "@/lib/utils";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +17,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface ShoppingListItemProps {
   item: ShoppingItem;
@@ -30,9 +30,7 @@ export function ShoppingListItemCard({
   onDelete,
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices);
-  const [selectedStore, setSelectedStore] = useState<Store | null | undefined>(item.selectedStore);
   const [isClient, setIsClient] = useState(false);
-  const baseId = useId();
 
   useEffect(() => {
     setIsClient(true);
@@ -40,8 +38,7 @@ export function ShoppingListItemCard({
 
   useEffect(() => {
     setPrices(item.prices);
-    setSelectedStore(item.selectedStore);
-  }, [item.prices, item.selectedStore]);
+  }, [item.prices]);
 
   const handlePriceChange = (store: Store, value: string) => {
     const newPrice = value === "" ? undefined : parseFloat(value);
@@ -49,29 +46,33 @@ export function ShoppingListItemCard({
     setPrices(newPrices);
     onUpdate({ ...item, prices: newPrices });
   };
-  
-  const handleStoreSelectionChange = (store: Store) => {
-    const newSelectedStore = store === selectedStore ? null : store;
-    setSelectedStore(newSelectedStore);
-    onUpdate({ ...item, selectedStore: newSelectedStore });
-  };
 
-  const cheapest = useMemo(() => {
+  const autoSelectedStore = useMemo(() => {
     const validPrices = Object.entries(prices)
-      .filter(([, price]) => price !== undefined && price > 0)
+      .filter(([, price]) => typeof price === 'number' && price > 0)
       .map(([store, price]) => ({ store: store as Store, price: price! }));
 
     if (validPrices.length === 0) return null;
 
-    return validPrices.reduce((min, p) => (p.price < min.price ? p : min));
+    const cheapest = validPrices.reduce((min, p) => (p.price < min.price ? p : min));
+    
+    const familaPrice = prices.famila;
+    if (familaPrice !== undefined && familaPrice <= cheapest.price * 1.20) {
+      return { store: 'famila' as Store, price: familaPrice };
+    }
+
+    return cheapest;
   }, [prices]);
   
   const getFooterText = () => {
-    if (selectedStore && prices[selectedStore]) {
-      return `Selezionato: ${selectedStore.charAt(0).toUpperCase() + selectedStore.slice(1)}`;
-    }
-    if (cheapest) {
-      return `Più economico da ${cheapest.store.charAt(0).toUpperCase() + cheapest.store.slice(1)}`;
+    if (autoSelectedStore) {
+      const storeName = autoSelectedStore.store.charAt(0).toUpperCase() + autoSelectedStore.store.slice(1);
+      if (autoSelectedStore.store === 'famila' && autoSelectedStore.price > (
+        Object.values(prices).filter(p => p !== undefined && p > 0).reduce((min, p) => p! < min! ? p : min, Infinity) ?? Infinity
+      )) {
+        return `Scelto ${storeName} (conveniente)`;
+      }
+      return `Più economico da ${storeName}`;
     }
     return "Nessun prezzo inserito";
   };
@@ -79,11 +80,8 @@ export function ShoppingListItemCard({
   const footerText = getFooterText();
 
   const getPriceForFooter = () => {
-    if (selectedStore && prices[selectedStore]) {
-      return `€${prices[selectedStore]!.toFixed(2)}`;
-    }
-    if (cheapest) {
-      return `€${cheapest.price.toFixed(2)}`;
+    if (autoSelectedStore) {
+      return `€${autoSelectedStore.price.toFixed(2)}`;
     }
     return "";
   }
@@ -109,29 +107,20 @@ export function ShoppingListItemCard({
           <span className="sr-only">Elimina Articolo</span>
         </Button>
       </CardHeader>
-      <CardContent className="flex-grow space-y-4">
-        <RadioGroup 
-          value={selectedStore ?? ""}
-          onValueChange={(value) => handleStoreSelectionChange(value as Store)}
-          className="space-y-3"
-        >
+      <CardContent className="flex-grow space-y-3">
           {stores.map((store) => {
-            const radioId = `${baseId}-${store}-radio`;
-            const inputId = `${baseId}-${store}-input`;
-            const isCheapest = !selectedStore && cheapest?.store === store;
-            const isSelected = selectedStore === store;
+            const isSelected = autoSelectedStore?.store === store;
 
             return (
               <div 
                 key={store} 
                 data-state={isSelected ? 'selected' : 'unselected'}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg border p-3 transition-all",
+                  "flex items-center gap-4 rounded-lg border p-3 transition-all",
                   "data-[state=selected]:border-primary data-[state=selected]:ring-2 data-[state=selected]:ring-primary/50"
                 )}
               >
-                <RadioGroupItem value={store} id={radioId} />
-                <Label htmlFor={radioId} className="flex-1 capitalize cursor-pointer text-base">
+                <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-base font-medium">
                   {store}
                 </Label>
                 <div className="relative w-28">
@@ -139,28 +128,24 @@ export function ShoppingListItemCard({
                     €
                   </span>
                   <Input
-                    id={inputId}
+                    id={`${item.id}-${store}`}
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={prices[store] ?? ""}
                     onChange={(e) => handlePriceChange(store, e.target.value)}
-                    className={cn(
-                      "pl-7 text-right",
-                      isCheapest && "border-green-500/50"
-                    )}
+                    className="pl-7 text-right"
                   />
                 </div>
               </div>
             );
           })}
-        </RadioGroup>
       </CardContent>
       {isClient && (
         <CardFooter>
           <div className="flex w-full items-center justify-between rounded-lg bg-secondary p-3 text-center">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className={cn("h-5 w-5", (selectedStore || cheapest) ? "text-green-500" : "text-muted-foreground")} />
+              <CheckCircle2 className={cn("h-5 w-5", autoSelectedStore ? "text-green-500" : "text-muted-foreground")} />
               <p className="text-sm font-medium text-secondary-foreground">
                 {footerText}
               </p>
