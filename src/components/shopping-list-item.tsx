@@ -95,7 +95,7 @@ export function ShoppingListItemCard({
         <RadioGroup 
           value={selectedStore ?? ""}
           onValueChange={(value) => handleStoreSelectionChange(value as Store)}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
         >
           {stores.map((store) => (
             <div key={store} className="space-y-1.5">
