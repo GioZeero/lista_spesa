@@ -66,15 +66,9 @@ export function ShoppingListItemCard({
   
   const getFooterText = () => {
     if (autoSelectedStore) {
-      const storeName = autoSelectedStore.store.charAt(0).toUpperCase() + autoSelectedStore.store.slice(1);
-      if (autoSelectedStore.store === 'famila' && autoSelectedStore.price > (
-        Object.values(prices).filter(p => p !== undefined && p > 0).reduce((min, p) => p! < min! ? p : min, Infinity) ?? Infinity
-      )) {
-        return `Scelto ${storeName} (conveniente)`;
-      }
-      return `Più economico da ${storeName}`;
+      return autoSelectedStore.store.charAt(0).toUpperCase() + autoSelectedStore.store.slice(1);
     }
-    return "Nessun prezzo inserito";
+    return "Nessun prezzo";
   };
 
   const footerText = getFooterText();
@@ -145,7 +139,7 @@ export function ShoppingListItemCard({
         <CardFooter>
           <div className="flex w-full items-center justify-between rounded-lg bg-secondary p-3 text-center">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className={cn("h-5 w-5", autoSelectedStore ? "text-green-500" : "text-muted-foreground")} />
+              <CheckCircle2 className={cn("h-5 w-5", autoSelectedStore ? "text-primary" : "text-muted-foreground")} />
               <p className="text-sm font-medium text-secondary-foreground">
                 {footerText}
               </p>
