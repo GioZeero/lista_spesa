@@ -55,9 +55,11 @@ export default function Home() {
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [currentYear, setCurrentYear] = useState<number | null>(null);
 
   useEffect(() => {
     setIsClient(true);
+    setCurrentYear(new Date().getFullYear());
   }, []);
 
   useEffect(() => {
@@ -87,7 +89,6 @@ export default function Home() {
     });
 
     const newList: ShoppingItem[] = Object.entries(aggregatedItems).map(([name, data], index) => {
-      // Convert total grams to kg for price calculation, which is in kg
       const quantityInKg = data.quantity / 1000;
       return {
         id: `shopping-item-${index}`,
@@ -199,8 +200,8 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
-        {isClient && (
-          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
+        {currentYear && (
+          <span>© {currentYear} ShopSmart. Tutti i diritti riservati.</span>
         )}
       </footer>
     </div>
