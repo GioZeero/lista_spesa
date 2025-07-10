@@ -92,17 +92,17 @@ export function ShoppingListItemCard({
             item.isHighlighted && "shadow-lg shadow-primary/40 ring-2 ring-primary/80"
           )}>
           <div className="flex flex-col p-6">
-             <div className="flex items-start justify-between">
-                <div className="flex flex-1 items-center gap-3">
-                    <span className={cn("h-3 w-3 rounded-full flex-shrink-0", freshnessConfig[freshness].color)}></span>
-                    <div>
-                      <h3 className="text-xl font-bold">{item.name}</h3>
-                      <p className="font-medium text-primary">
-                        {item.quantity} {item.unit}
-                      </p>
+             <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                        <span className={cn("h-3 w-3 rounded-full flex-shrink-0", freshnessConfig[freshness].color)}></span>
+                        <h3 className="text-xl font-bold">{item.name}</h3>
                     </div>
+                  <p className="font-medium text-primary pl-6">
+                    {item.quantity} {item.unit}
+                  </p>
                 </div>
-                 <Button variant="ghost" size="icon" onClick={handleHighlightToggle} className="h-8 w-8 -mr-2 -mt-2 text-muted-foreground hover:text-primary">
+                 <Button variant="ghost" size="icon" onClick={handleHighlightToggle} className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-primary">
                     <ShoppingCart className={cn("h-5 w-5", item.isHighlighted && "text-primary fill-primary/20")} />
                 </Button>
             </div>
