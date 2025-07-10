@@ -154,14 +154,13 @@ export function ShoppingListItemCard({
                 <Separator />
                 <div>
                    <p className="text-xs text-muted-foreground mb-2">Imposta la freschezza del prodotto.</p>
-                   <div className="flex items-center justify-between gap-2">
+                   <div className="flex flex-col gap-2">
                       {(['green', 'yellow', 'red'] as Freshness[]).map((level) => (
                          <Button
                             key={level}
                             variant={freshness === level ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => handleFreshnessChange(level)}
-                            className="flex-1"
                          >
                            <span className={cn("h-3 w-3 rounded-full mr-2", freshnessConfig[level].color)}></span>
                            {freshnessConfig[level].label.split('(')[0].trim()}
