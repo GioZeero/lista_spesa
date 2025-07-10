@@ -79,7 +79,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
       id: `food-${Date.now()}`,
       name: "",
       quantity: 0,
-      unit: "kg",
+      unit: "g",
     };
     setDayTypes(
       dayTypes.map((d) =>

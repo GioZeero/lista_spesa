@@ -14,18 +14,18 @@ const initialDiet: DietPlan = {
       id: "day-type-1",
       name: "Giorno 1",
       items: [
-        { id: 'item-1', name: 'Petto di Pollo', quantity: 0.2, unit: 'kg' },
-        { id: 'item-2', name: 'Riso Basmati', quantity: 0.1, unit: 'kg' },
-        { id: 'item-3', name: 'Broccoli', quantity: 0.15, unit: 'kg' },
+        { id: 'item-1', name: 'Petto di Pollo', quantity: 200, unit: 'g' },
+        { id: 'item-2', name: 'Riso Basmati', quantity: 80, unit: 'g' },
+        { id: 'item-3', name: 'Broccoli', quantity: 150, unit: 'g' },
       ],
     },
     {
       id: "day-type-2",
       name: "Giorno 2",
       items: [
-        { id: 'item-4', name: 'Salmone', quantity: 0.18, unit: 'kg' },
-        { id: 'item-5', name: 'Quinoa', quantity: 0.1, unit: 'kg' },
-        { id: 'item-6', name: 'Spinaci Freschi', quantity: 0.2, unit: 'kg' },
+        { id: 'item-4', name: 'Salmone', quantity: 180, unit: 'g' },
+        { id: 'item-5', name: 'Quinoa', quantity: 80, unit: 'g' },
+        { id: 'item-6', name: 'Spinaci Freschi', quantity: 200, unit: 'g' },
       ],
     }
   ],
@@ -72,25 +72,31 @@ export default function Home() {
       const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
       if (dayType) {
         dayType.items.forEach(item => {
+          const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
+          
           if (aggregatedItems[item.name]) {
-            aggregatedItems[item.name].quantity += item.quantity;
+            aggregatedItems[item.name].quantity += quantityInGrams;
           } else {
             aggregatedItems[item.name] = {
-              quantity: item.quantity,
-              unit: item.unit,
+              quantity: quantityInGrams,
+              unit: 'g',
             };
           }
         });
       }
     });
 
-    const newList: ShoppingItem[] = Object.entries(aggregatedItems).map(([name, data], index) => ({
-      id: `shopping-item-${index}`,
-      name,
-      quantity: parseFloat(data.quantity.toFixed(2)),
-      unit: data.unit,
-      prices: itemPrices[name] || {},
-    }));
+    const newList: ShoppingItem[] = Object.entries(aggregatedItems).map(([name, data], index) => {
+      // Convert total grams to kg for price calculation, which is in kg
+      const quantityInKg = data.quantity / 1000;
+      return {
+        id: `shopping-item-${index}`,
+        name,
+        quantity: parseFloat(quantityInKg.toFixed(2)),
+        unit: 'kg',
+        prices: itemPrices[name] || {},
+      }
+    });
 
     setShoppingList(newList);
   };
