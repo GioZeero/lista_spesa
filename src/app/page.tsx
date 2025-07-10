@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus, ShoppingCart, BrainCircuit } from "lucide-react";
 import type { ShoppingItem } from "@/types";
 import { AddItemSheet } from "@/components/add-item-sheet";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -95,7 +95,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-7 w-7 text-primary" />
             <h1 className="font-headline text-xl font-semibold tracking-tight sm:text-2xl">
-              SpesaIntelligente
+              ShopSmart
             </h1>
           </div>
           <div className="flex items-center gap-2">
@@ -149,7 +149,9 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} SpesaIntelligente. Tutti i diritti riservati.
+        {isClient && (
+          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
+        )}
       </footer>
     </div>
   );
