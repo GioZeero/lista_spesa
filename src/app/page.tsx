@@ -1,47 +1,58 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, ShoppingCart, BrainCircuit } from "lucide-react";
-import type { ShoppingItem } from "@/types";
-import { AddItemSheet } from "@/components/add-item-sheet";
+import { ShoppingCart, NotebookPen, Utensils } from "lucide-react";
+import type { ShoppingItem, DietPlan } from "@/types";
+import { DietSheet } from "@/components/diet-sheet";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ShoppingListItemCard } from "@/components/shopping-list-item";
 import { Button } from "@/components/ui/button";
 
-const initialItems: ShoppingItem[] = [
-  {
-    id: '1',
-    name: 'Mele Biologiche',
-    quantity: 1,
-    unit: 'kg',
-    prices: { famila: 2.99, lidl: 2.49, primoprezzo: 3.20 },
+const initialDiet: DietPlan = {
+  dayTypes: [
+    {
+      id: "day-type-1",
+      name: "Giorno 1",
+      items: [
+        { id: 'item-1', name: 'Petto di Pollo', quantity: 0.2, unit: 'kg' },
+        { id: 'item-2', name: 'Riso Basmati', quantity: 0.1, unit: 'kg' },
+        { id: 'item-3', name: 'Broccoli', quantity: 0.15, unit: 'kg' },
+      ],
+    },
+    {
+      id: "day-type-2",
+      name: "Giorno 2",
+      items: [
+        { id: 'item-4', name: 'Salmone', quantity: 0.18, unit: 'kg' },
+        { id: 'item-5', name: 'Quinoa', quantity: 0.1, unit: 'kg' },
+        { id: 'item-6', name: 'Spinaci Freschi', quantity: 0.2, unit: 'kg' },
+      ],
+    }
+  ],
+  week: {
+    monday: "day-type-1",
+    tuesday: "day-type-2",
+    wednesday: "day-type-1",
+    thursday: "day-type-2",
+    friday: "day-type-1",
+    saturday: "day-type-2",
+    sunday: "day-type-1",
   },
-  {
-    id: '2',
-    name: 'Latte Intero',
-    quantity: 2,
-    unit: 'L',
-    prices: { famila: 1.15, lidl: 0.99, primoprezzo: 1.25 },
-  },
-  {
-    id: '3',
-    name: 'Pane a Lievitazione Naturale',
-    quantity: 1,
-    unit: 'filone',
-    prices: { famila: 3.50, primoprezzo: 3.80 },
-  },
-  {
-    id: '4',
-    name: 'Uova da Allevamento a Terra',
-    quantity: 12,
-    unit: 'pezzi',
-    prices: { lidl: 2.80 },
-  },
-];
+};
+
+const itemPrices: Record<string, ShoppingItem['prices']> = {
+  'Petto di Pollo': { famila: 10.50, lidl: 9.80, primoprezzo: 11.00 },
+  'Riso Basmati': { famila: 4.50, lidl: 4.20, primoprezzo: 4.80 },
+  'Broccoli': { famila: 2.80, lidl: 2.50, primoprezzo: 3.00 },
+  'Salmone': { famila: 22.00, lidl: 20.50, primoprezzo: 23.00 },
+  'Quinoa': { famila: 8.00, lidl: 7.50, primoprezzo: 8.50 },
+  'Spinaci Freschi': { famila: 3.50, lidl: 3.20, primoprezzo: 3.80 },
+};
 
 
 export default function Home() {
-  const [items, setItems] = useState<ShoppingItem[]>(initialItems);
+  const [diet, setDiet] = useState<DietPlan>(initialDiet);
+  const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
 
@@ -49,16 +60,43 @@ export default function Home() {
     setIsClient(true);
   }, []);
 
-  const handleAddItem = (item: Omit<ShoppingItem, 'id' | 'prices'>) => {
-    setItems((prevItems) => [
-      ...prevItems,
-      { ...item, id: Date.now().toString(), prices: {} },
-    ]);
-    setIsSheetOpen(false);
-  };
+  useEffect(() => {
+    updateShoppingList(diet);
+  }, [diet]);
 
+  const updateShoppingList = (currentDiet: DietPlan) => {
+    const aggregatedItems: { [key: string]: { quantity: number; unit: string } } = {};
+
+    Object.values(currentDiet.week).forEach(dayTypeId => {
+      if (!dayTypeId) return;
+      const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
+      if (dayType) {
+        dayType.items.forEach(item => {
+          if (aggregatedItems[item.name]) {
+            aggregatedItems[item.name].quantity += item.quantity;
+          } else {
+            aggregatedItems[item.name] = {
+              quantity: item.quantity,
+              unit: item.unit,
+            };
+          }
+        });
+      }
+    });
+
+    const newList: ShoppingItem[] = Object.entries(aggregatedItems).map(([name, data], index) => ({
+      id: `shopping-item-${index}`,
+      name,
+      quantity: parseFloat(data.quantity.toFixed(2)),
+      unit: data.unit,
+      prices: itemPrices[name] || {},
+    }));
+
+    setShoppingList(newList);
+  };
+  
   const handleUpdateItem = (updatedItem: ShoppingItem) => {
-    setItems((prevItems) =>
+    setShoppingList((prevItems) =>
       prevItems.map((item) =>
         item.id === updatedItem.id ? updatedItem : item
       )
@@ -66,10 +104,15 @@ export default function Home() {
   };
 
   const handleDeleteItem = (id: string) => {
-    setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+    setShoppingList((prevItems) => prevItems.filter((item) => item.id !== id));
   };
 
-  const totalCost = items.reduce((total, item) => {
+  const handleSaveDiet = (newDiet: DietPlan) => {
+    setDiet(newDiet);
+    setIsSheetOpen(false);
+  };
+
+  const totalCost = shoppingList.reduce((total, item) => {
     const validPrices = Object.entries(item.prices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
       .map(([store, price]) => ({ store, price: price! }));
@@ -83,54 +126,55 @@ export default function Home() {
     if (familaPrice && familaPrice <= cheapest.price * 1.20) {
       selectedPrice = familaPrice;
     }
-
+    
     return total + selectedPrice * item.quantity;
   }, 0).toFixed(2);
 
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-body text-foreground">
-      <header className="sticky top-0 z-10 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-7 w-7 text-primary" />
-            <h1 className="font-headline text-xl font-semibold tracking-tight sm:text-2xl">
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
               ShopSmart
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <AddItemSheet
-              open={isSheetOpen}
-              onOpenChange={setIsSheetOpen}
-              onAddItem={handleAddItem}
-            >
-              <Button onClick={() => setIsSheetOpen(true)} className="group">
-                 Aggiungi Articolo
-                 <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
-              </Button>
-            </AddItemSheet>
+            <Button onClick={() => setIsSheetOpen(true)} className="group">
+               Gestisci Dieta
+               <NotebookPen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+            </Button>
             <ModeToggle />
           </div>
         </div>
       </header>
 
+      <DietSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        onSave={handleSaveDiet}
+        initialDiet={diet}
+      />
+
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-lg border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
           <div>
-            <h2 className="text-2xl font-bold text-card-foreground">La Mia Lista della Spesa</h2>
-            <p className="text-muted-foreground">Rivedi e gestisci gli articoli qui sotto.</p>
+            <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
+            <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
           </div>
           {isClient && (
             <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-              <span>Totale Stimato:</span>
+              <span>Costo Totale:</span>
               <span>€{totalCost}</span>
             </div>
           )}
         </div>
 
-        {items.length > 0 ? (
+        {shoppingList.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {items.map((item) => (
+            {shoppingList.map((item) => (
               <ShoppingListItemCard
                 key={item.id}
                 item={item}
@@ -141,9 +185,9 @@ export default function Home() {
           </div>
         ) : (
           <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
-            <ShoppingCart className="h-16 w-16 text-muted-foreground/50" />
-            <h3 className="text-xl font-semibold">La tua lista è vuota</h3>
-            <p className="max-w-xs">Clicca "Aggiungi Articolo" per iniziare a compilare la tua lista della spesa.</p>
+            <Utensils className="h-16 w-16 text-muted-foreground/50" />
+            <h3 className="text-xl font-semibold">La tua dieta è vuota</h3>
+            <p className="max-w-xs">Clicca "Gestisci Dieta" per iniziare a compilare il tuo piano settimanale.</p>
           </div>
         )}
       </main>

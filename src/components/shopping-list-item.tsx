@@ -46,7 +46,7 @@ export function ShoppingListItemCard({
     setPrices(newPrices);
     onUpdate({ ...item, prices: newPrices });
   };
-
+  
   const autoSelectedStore = useMemo(() => {
     const validPrices = Object.entries(prices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
@@ -75,7 +75,7 @@ export function ShoppingListItemCard({
 
   const getPriceForFooter = () => {
     if (autoSelectedStore) {
-      return `€${autoSelectedStore.price.toFixed(2)}`;
+      return `€${(autoSelectedStore.price * item.quantity).toFixed(2)}`;
     }
     return "";
   }
@@ -83,11 +83,11 @@ export function ShoppingListItemCard({
   const priceText = getPriceForFooter();
 
   return (
-    <Card className="flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-      <CardHeader className="flex-row items-start justify-between">
+    <Card className="flex flex-col rounded-xl transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+      <CardHeader className="flex-row items-start justify-between pb-3">
         <div>
-          <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-xl">{item.name}</CardTitle>
+          <CardDescription className="font-medium text-primary">
             {item.quantity} {item.unit}
           </CardDescription>
         </div>
@@ -101,7 +101,7 @@ export function ShoppingListItemCard({
           <span className="sr-only">Elimina Articolo</span>
         </Button>
       </CardHeader>
-      <CardContent className="flex-grow space-y-3">
+      <CardContent className="flex-grow space-y-2">
           {stores.map((store) => {
             const isSelected = autoSelectedStore?.store === store;
 
@@ -110,11 +110,11 @@ export function ShoppingListItemCard({
                 key={store} 
                 data-state={isSelected ? 'selected' : 'unselected'}
                 className={cn(
-                  "flex items-center gap-4 rounded-lg border p-3 transition-all",
-                  "data-[state=selected]:border-primary data-[state=selected]:ring-2 data-[state=selected]:ring-primary/50"
+                  "flex items-center justify-between gap-4 rounded-lg border p-3 transition-all",
+                  "data-[state=selected]:border-primary data-[state=selected]:bg-primary/5 data-[state=selected]:ring-1 data-[state=selected]:ring-primary"
                 )}
               >
-                <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-base font-medium">
+                <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-sm font-medium">
                   {store}
                 </Label>
                 <div className="relative w-28">
@@ -128,7 +128,7 @@ export function ShoppingListItemCard({
                     placeholder="0.00"
                     value={prices[store] ?? ""}
                     onChange={(e) => handlePriceChange(store, e.target.value)}
-                    className="pl-7 text-right"
+                    className="pl-7 text-right font-semibold"
                   />
                 </div>
               </div>
@@ -136,11 +136,11 @@ export function ShoppingListItemCard({
           })}
       </CardContent>
       {isClient && (
-        <CardFooter>
-          <div className="flex w-full items-center justify-between rounded-lg bg-secondary p-3 text-center">
+        <CardFooter className="pt-4">
+          <div className="flex w-full items-center justify-between rounded-lg bg-muted p-3 text-center">
             <div className="flex items-center gap-2">
               <CheckCircle2 className={cn("h-5 w-5", autoSelectedStore ? "text-primary" : "text-muted-foreground")} />
-              <p className="text-sm font-medium text-secondary-foreground">
+              <p className="text-sm font-semibold text-foreground">
                 {footerText}
               </p>
             </div>
