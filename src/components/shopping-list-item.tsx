@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useId } from "react";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ShoppingItem, Store } from "@/types";
@@ -31,6 +31,12 @@ export function ShoppingListItemCard({
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices);
   const [selectedStore, setSelectedStore] = useState<Store | null | undefined>(item.selectedStore);
+  const [isClient, setIsClient] = useState(false);
+  const baseId = useId();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     setPrices(item.prices);
@@ -95,38 +101,42 @@ export function ShoppingListItemCard({
         <RadioGroup 
           value={selectedStore ?? ""}
           onValueChange={(value) => handleStoreSelectionChange(value as Store)}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
-          {stores.map((store) => (
-            <div key={store} className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value={store} id={`${store}-radio-${item.id}`} />
-                <Label htmlFor={`${store}-radio-${item.id}`} className="capitalize cursor-pointer">
-                  {store}
-                </Label>
+          {stores.map((store) => {
+            const radioId = `${baseId}-${store}-radio`;
+            const inputId = `${baseId}-${store}-input`;
+            return (
+              <div key={store} className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value={store} id={radioId} />
+                  <Label htmlFor={radioId} className="capitalize cursor-pointer">
+                    {store}
+                  </Label>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                    €
+                  </span>
+                  <Input
+                    id={inputId}
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={prices[store] ?? ""}
+                    onChange={(e) => handlePriceChange(store, e.target.value)}
+                    className={cn(
+                      "pl-6",
+                      (selectedStore === store || (!selectedStore && cheapest?.store === store)) && "border-accent ring-2 ring-accent"
+                    )}
+                  />
+                </div>
               </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  €
-                </span>
-                <Input
-                  id={`${store}-input-${item.id}`}
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={prices[store] ?? ""}
-                  onChange={(e) => handlePriceChange(store, e.target.value)}
-                  className={cn(
-                    "pl-6",
-                    (selectedStore === store || (!selectedStore && cheapest?.store === store)) && "border-accent ring-2 ring-accent"
-                  )}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </RadioGroup>
       </CardContent>
-      {footerText && (
+      {isClient && footerText && (
         <CardFooter>
           <div className="flex w-full items-center justify-center rounded-md bg-accent/10 p-3 text-center">
             <p className="text-sm font-medium text-accent-foreground">
