@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ShoppingCart, NotebookPen, Utensils } from "lucide-react";
-import type { ShoppingItem, DietPlan } from "@/types";
+import type { ShoppingItem, DietPlan, Store } from "@/types";
 import { DietSheet } from "@/components/diet-sheet";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ShoppingListItemCard } from "@/components/shopping-list-item";
@@ -122,19 +122,20 @@ export default function Home() {
   const totalCost = shoppingList.reduce((total, item) => {
     const validPrices = Object.entries(item.prices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
-      .map(([store, price]) => ({ store, price: price! }));
+      .map(([store, price]) => ({ store: store as Store, price: price! }));
 
     if (validPrices.length === 0) return total;
 
     const cheapest = validPrices.reduce((min, p) => (p.price < min.price ? p : min));
-    let selectedPrice = cheapest.price;
-
-    const familaPrice = item.prices.famila;
-    if (familaPrice && familaPrice <= cheapest.price * 1.20) {
-      selectedPrice = familaPrice;
-    }
     
-    return total + selectedPrice * item.quantity;
+    const familaPrice = item.prices.famila;
+    let selectedStore = cheapest;
+
+    if (familaPrice !== undefined && familaPrice <= cheapest.price * 1.20) {
+      selectedStore = { store: 'famila', price: familaPrice };
+    }
+
+    return total + selectedStore.price * item.quantity;
   }, 0).toFixed(2);
 
 
