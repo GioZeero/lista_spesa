@@ -8,4 +8,5 @@ export type ShoppingItem = {
   quantity: number;
   unit: string;
   prices: Partial<Record<Store, number>>;
+  selectedStore?: Store | null;
 };

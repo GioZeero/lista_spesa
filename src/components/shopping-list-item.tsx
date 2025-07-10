@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface ShoppingListItemProps {
   item: ShoppingItem;
@@ -29,18 +30,24 @@ export function ShoppingListItemCard({
   onDelete,
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices);
+  const [selectedStore, setSelectedStore] = useState<Store | null | undefined>(item.selectedStore);
 
   useEffect(() => {
     setPrices(item.prices);
-  }, [item.prices]);
+    setSelectedStore(item.selectedStore);
+  }, [item.prices, item.selectedStore]);
 
   const handlePriceChange = (store: Store, value: string) => {
     const newPrice = value === "" ? undefined : parseFloat(value);
-    setPrices((prev) => ({ ...prev, [store]: newPrice }));
+    const newPrices = { ...prices, [store]: newPrice };
+    setPrices(newPrices);
+    onUpdate({ ...item, prices: newPrices });
   };
-
-  const handlePriceBlur = () => {
-    onUpdate({ ...item, prices });
+  
+  const handleStoreSelectionChange = (store: Store) => {
+    const newSelectedStore = store === selectedStore ? null : store;
+    setSelectedStore(newSelectedStore);
+    onUpdate({ ...item, selectedStore: newSelectedStore });
   };
 
   const cheapest = useMemo(() => {
@@ -52,16 +59,28 @@ export function ShoppingListItemCard({
 
     return validPrices.reduce((min, p) => (p.price < min.price ? p : min));
   }, [prices]);
+  
+  const getFooterText = () => {
+    if (selectedStore && prices[selectedStore]) {
+      return `Selezionato: ${selectedStore.charAt(0).toUpperCase() + selectedStore.slice(1)} a €${prices[selectedStore]!.toFixed(2)}`;
+    }
+    if (cheapest) {
+      return `Più economico da ${cheapest.store} a €${cheapest.price.toFixed(2)}`;
+    }
+    return null;
+  };
+
+  const footerText = getFooterText();
 
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex items-start justify-between">
           <span className="font-headline">{item.name}</span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
             onClick={() => onDelete(item.id)}
           >
             <Trash2 className="h-4 w-4" />
@@ -73,39 +92,45 @@ export function ShoppingListItemCard({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <RadioGroup 
+          value={selectedStore ?? ""}
+          onValueChange={(value) => handleStoreSelectionChange(value as Store)}
+          className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+        >
           {stores.map((store) => (
             <div key={store} className="space-y-1.5">
-              <Label htmlFor={`${store}-${item.id}`} className="capitalize">
-                {store}
-              </Label>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value={store} id={`${store}-radio-${item.id}`} />
+                <Label htmlFor={`${store}-radio-${item.id}`} className="capitalize cursor-pointer">
+                  {store}
+                </Label>
+              </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   €
                 </span>
                 <Input
-                  id={`${store}-${item.id}`}
+                  id={`${store}-input-${item.id}`}
                   type="number"
                   step="0.01"
                   placeholder="0.00"
                   value={prices[store] ?? ""}
                   onChange={(e) => handlePriceChange(store, e.target.value)}
-                  onBlur={handlePriceBlur}
                   className={cn(
                     "pl-6",
-                    cheapest?.store === store && "border-accent ring-2 ring-accent"
+                    (selectedStore === store || (!selectedStore && cheapest?.store === store)) && "border-accent ring-2 ring-accent"
                   )}
                 />
               </div>
             </div>
           ))}
-        </div>
+        </RadioGroup>
       </CardContent>
-      {cheapest && (
+      {footerText && (
         <CardFooter>
           <div className="flex w-full items-center justify-center rounded-md bg-accent/10 p-3 text-center">
             <p className="text-sm font-medium text-accent-foreground">
-              Più economico da <span className="capitalize font-bold">{cheapest.store}</span> a €{cheapest.price.toFixed(2)}
+              {footerText}
             </p>
           </div>
         </CardFooter>

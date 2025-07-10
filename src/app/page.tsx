@@ -16,6 +16,7 @@ const initialItems: ShoppingItem[] = [
     quantity: 1,
     unit: 'kg',
     prices: { famila: 2.99, lidl: 2.49, primoprezzo: 3.20 },
+    selectedStore: 'lidl',
   },
   {
     id: '2',
@@ -23,6 +24,7 @@ const initialItems: ShoppingItem[] = [
     quantity: 2,
     unit: 'L',
     prices: { famila: 1.15, lidl: 0.99, primoprezzo: 1.25 },
+    selectedStore: null,
   },
   {
     id: '3',
@@ -30,6 +32,7 @@ const initialItems: ShoppingItem[] = [
     quantity: 1,
     unit: 'filone',
     prices: { famila: 3.50, primoprezzo: 3.80 },
+    selectedStore: 'famila'
   },
   {
     id: '4',
@@ -37,6 +40,7 @@ const initialItems: ShoppingItem[] = [
     quantity: 12,
     unit: 'pezzi',
     prices: { lidl: 2.80 },
+    selectedStore: null,
   },
 ];
 
@@ -52,7 +56,7 @@ export default function Home() {
   const handleAddItem = (item: Omit<ShoppingItem, 'id' | 'prices'>) => {
     setItems((prevItems) => [
       ...prevItems,
-      { ...item, id: Date.now().toString(), prices: {} },
+      { ...item, id: Date.now().toString(), prices: {}, selectedStore: null },
     ]);
     setIsSheetOpen(false);
   };
@@ -70,9 +74,14 @@ export default function Home() {
   };
 
   const totalCost = items.reduce((total, item) => {
-    const prices = Object.values(item.prices).filter(p => typeof p === 'number' && p > 0);
-    const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-    return total + (minPrice * item.quantity);
+    let price = 0;
+    if (item.selectedStore && item.prices[item.selectedStore]) {
+      price = item.prices[item.selectedStore]!;
+    } else {
+      const availablePrices = Object.values(item.prices).filter(p => typeof p === 'number' && p > 0);
+      price = availablePrices.length > 0 ? Math.min(...availablePrices) : 0;
+    }
+    return total + (price * item.quantity);
   }, 0).toFixed(2);
 
 
@@ -130,7 +139,7 @@ export default function Home() {
       </main>
 
       <footer className="py-6 text-center text-sm text-muted-foreground">
-        © {currentYear} SpesaIntelligente. Tutti i diritti riservati.
+        {currentYear !== null && `© ${currentYear} SpesaIntelligente. Tutti i diritti riservati.`}
       </footer>
     </div>
   );
