@@ -103,10 +103,9 @@ export function ShoppingListItemCard({
             </div>
           </div>
 
-          <AccordionTrigger className="group px-6 py-2 text-sm text-muted-foreground hover:no-underline">
+          <AccordionTrigger className="group justify-start px-6 py-2 text-sm text-muted-foreground hover:no-underline">
             <div className="flex items-center gap-1">
                 <Pencil className="h-3 w-3" /> Modifica Prezzi
-                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </div>
           </AccordionTrigger>
 
