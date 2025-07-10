@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, ShoppingCart, Trash2 } from "lucide-react";
+import { ChevronDown, ShoppingCart, Trash2, Pencil } from "lucide-react";
 import type { ShoppingItem, Store } from "@/types";
 import { stores } from "@/types";
 import { cn } from "@/lib/utils";
@@ -69,8 +69,6 @@ export function ShoppingListItemCard({
 
   const priceText = getPriceForFooter();
 
-  const otherStores = stores.filter(s => s !== autoSelectedStore?.store);
-
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value={item.id} className="border-none">
@@ -107,29 +105,33 @@ export function ShoppingListItemCard({
 
           <AccordionTrigger className="group px-6 py-2 text-sm text-muted-foreground hover:no-underline">
             <div className="flex items-center gap-1">
-                Mostra altri prezzi
+                <Pencil className="h-3 w-3" /> Modifica Prezzi
                 <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </div>
           </AccordionTrigger>
 
           <AccordionContent>
-            <div className="px-6 pb-6 pt-0 space-y-2">
-                {otherStores.map((store) => {
-                    const price = prices[store];
-                    return (
-                    <div 
-                        key={store} 
-                        className="flex items-center justify-between gap-4 rounded-lg border p-3"
-                    >
-                        <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-sm font-medium">
-                        {store}
-                        </Label>
-                        <p className="font-semibold text-muted-foreground">
-                            {price ? `€${price.toFixed(2)}/${item.unit}` : 'N/A'}
-                        </p>
+            <div className="px-6 pb-6 pt-0 space-y-3">
+                <p className="text-xs text-muted-foreground">Modifica i prezzi al kg per ogni negozio.</p>
+                {stores.map((store) => (
+                  <div key={store} className="flex items-center gap-3">
+                    <Label htmlFor={`${item.id}-${store}`} className="flex-1 capitalize text-sm font-medium">
+                      {store}
+                    </Label>
+                    <div className="relative w-28">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">€</span>
+                      <Input
+                        id={`${item.id}-${store}`}
+                        type="number"
+                        step="0.01"
+                        value={prices[store] ?? ""}
+                        onChange={(e) => handlePriceChange(store, e.target.value)}
+                        placeholder="0.00"
+                        className="pl-6 text-right"
+                      />
                     </div>
-                    );
-                })}
+                  </div>
+                ))}
             </div>
           </AccordionContent>
         </Card>
