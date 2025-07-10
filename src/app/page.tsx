@@ -48,9 +48,11 @@ export default function Home() {
   const [items, setItems] = useState<ShoppingItem[]>(initialItems);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
+    setIsClient(true);
   }, []);
 
   const handleAddItem = (item: Omit<ShoppingItem, 'id' | 'prices'>) => {
@@ -113,9 +115,11 @@ export default function Home() {
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         <div className="mb-6 flex flex-col items-center justify-between gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:p-6">
           <h2 className="text-xl font-semibold text-card-foreground">La Mia Lista della Spesa</h2>
-          <div className="text-lg font-bold text-foreground">
-            Totale Stimato: €{totalCost}
-          </div>
+          {isClient && (
+            <div className="text-lg font-bold text-foreground">
+              Totale Stimato: €{totalCost}
+            </div>
+          )}
         </div>
 
         {items.length > 0 ? (
