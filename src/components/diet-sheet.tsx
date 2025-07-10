@@ -122,7 +122,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
         <SheetHeader>
           <SheetTitle>Gestisci il Tuo Piano Dieta</SheetTitle>
           <SheetDescription>
-            Crea "giorni tipo", aggiungi alimenti e assegnali alla tua settimana.
+            Crea "piani giornalieri", aggiungi alimenti e assegnali alla tua settimana.
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 pr-4 -mr-6">
@@ -137,6 +137,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
                         value={dayType.name}
                         onChange={(e) => updateDayTypeName(dayType.id, e.target.value)}
                         className="font-bold text-base"
+                        readOnly
                       />
                       <Button variant="ghost" size="icon" onClick={() => removeDayType(dayType.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
@@ -168,13 +169,13 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
                <div className="grid grid-cols-1 gap-4">
                  {WEEK_DAYS.map(({key, label}) => (
                    <div key={key} className="flex items-center justify-between gap-4">
-                      <Label className="font-medium text-base w-24">{label}</Label>
+                      <Label htmlFor={`day-select-${key}`} className="font-medium text-base w-24">{label}</Label>
                       <Select
                         value={week[key] ?? "none"}
                         onValueChange={(value) => handleWeekDayChange(key, value)}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona un giorno..." />
+                        <SelectTrigger id={`day-select-${key}`}>
+                          <SelectValue placeholder="Seleziona un piano..." />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Nessuno</SelectItem>
