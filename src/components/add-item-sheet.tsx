@@ -25,13 +25,13 @@ import {
 
 const formSchema = z.object({
   name: z.string().min(2, {
-    message: "Item name must be at least 2 characters.",
+    message: "Il nome dell'articolo deve contenere almeno 2 caratteri.",
   }),
   quantity: z.coerce.number().positive({
-    message: "Quantity must be a positive number.",
+    message: "La quantità deve essere un numero positivo.",
   }),
   unit: z.string().min(1, {
-    message: "Unit is required (e.g., kg, L, item).",
+    message: "L'unità è richiesta (es. kg, L, articolo).",
   }),
 });
 
@@ -64,9 +64,9 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
       <SheetTrigger asChild>{children}</SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Add a new item</SheetTitle>
+          <SheetTitle>Aggiungi un nuovo articolo</SheetTitle>
           <SheetDescription>
-            Enter the details of the item you want to add to your shopping list.
+            Inserisci i dettagli dell'articolo che vuoi aggiungere alla tua lista della spesa.
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>
@@ -76,9 +76,9 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Item Name</FormLabel>
+                  <FormLabel>Nome Articolo</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Organic Bananas" {...field} />
+                    <Input placeholder="es. Banane Biologiche" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -90,7 +90,7 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
                 name="quantity"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>Quantity</FormLabel>
+                    <FormLabel>Quantità</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="1" {...field} />
                     </FormControl>
@@ -103,7 +103,7 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
                 name="unit"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>Unit</FormLabel>
+                    <FormLabel>Unità</FormLabel>
                     <FormControl>
                       <Input placeholder="kg" {...field} />
                     </FormControl>
@@ -112,7 +112,7 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
                 )}
               />
             </div>
-            <Button type="submit" className="w-full">Add to List</Button>
+            <Button type="submit" className="w-full">Aggiungi alla Lista</Button>
           </form>
         </Form>
       </SheetContent>

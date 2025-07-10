@@ -7,34 +7,35 @@ import { Button } from "@/components/ui/button";
 import { AddItemSheet } from "@/components/add-item-sheet";
 import { ShoppingListItemCard } from "@/components/shopping-list-item";
 import type { ShoppingItem } from "@/types";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const initialItems: ShoppingItem[] = [
   {
     id: '1',
-    name: 'Organic Apples',
+    name: 'Mele Biologiche',
     quantity: 1,
     unit: 'kg',
     prices: { famila: 2.99, lidl: 2.49, primoprezzo: 3.20 },
   },
   {
     id: '2',
-    name: 'Whole Milk',
+    name: 'Latte Intero',
     quantity: 2,
     unit: 'L',
     prices: { famila: 1.15, lidl: 0.99, primoprezzo: 1.25 },
   },
   {
     id: '3',
-    name: 'Sourdough Bread',
+    name: 'Pane a Lievitazione Naturale',
     quantity: 1,
-    unit: 'loaf',
+    unit: 'filone',
     prices: { famila: 3.50, primoprezzo: 3.80 },
   },
   {
     id: '4',
-    name: 'Free-range Eggs',
+    name: 'Uova da Allevamento a Terra',
     quantity: 12,
-    unit: 'pieces',
+    unit: 'pezzi',
     prices: { lidl: 2.80 },
   },
 ];
@@ -76,27 +77,30 @@ export default function Home() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight font-headline text-gray-800">
-              ShopSmart
+            <h1 className="text-2xl font-bold tracking-tight font-headline">
+              SpesaIntelligente
             </h1>
           </div>
-          <AddItemSheet
-            open={isSheetOpen}
-            onOpenChange={setIsSheetOpen}
-            onAddItem={handleAddItem}
-          >
-            <Button onClick={() => setIsSheetOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Item
-            </Button>
-          </AddItemSheet>
+          <div className="flex items-center gap-2">
+            <AddItemSheet
+              open={isSheetOpen}
+              onOpenChange={setIsSheetOpen}
+              onAddItem={handleAddItem}
+            >
+              <Button onClick={() => setIsSheetOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> Aggiungi Articolo
+              </Button>
+            </AddItemSheet>
+            <ModeToggle />
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         <div className="mb-6 flex flex-col items-center justify-between gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:p-6">
-          <h2 className="text-xl font-semibold text-card-foreground">My Shopping List</h2>
+          <h2 className="text-xl font-semibold text-card-foreground">La Mia Lista della Spesa</h2>
           <div className="text-lg font-bold text-accent">
-            Estimated Total: ${totalCost}
+            Totale Stimato: €{totalCost}
           </div>
         </div>
 
@@ -114,14 +118,14 @@ export default function Home() {
         ) : (
           <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
             <ShoppingCart className="h-16 w-16" />
-            <h3 className="text-xl font-semibold">Your list is empty</h3>
-            <p>Click "Add Item" to start building your shopping list.</p>
+            <h3 className="text-xl font-semibold">La tua lista è vuota</h3>
+            <p>Clicca "Aggiungi Articolo" per iniziare a compilare la tua lista della spesa.</p>
           </div>
         )}
       </main>
 
       <footer className="py-6 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} ShopSmart. All rights reserved.
+        © {new Date().getFullYear()} SpesaIntelligente. Tutti i diritti riservati.
       </footer>
     </div>
   );

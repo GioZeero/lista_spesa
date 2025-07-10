@@ -65,7 +65,7 @@ export function ShoppingListItemCard({
             onClick={() => onDelete(item.id)}
           >
             <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete Item</span>
+            <span className="sr-only">Elimina Articolo</span>
           </Button>
         </CardTitle>
         <CardDescription>
@@ -81,7 +81,7 @@ export function ShoppingListItemCard({
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  $
+                  €
                 </span>
                 <Input
                   id={`${store}-${item.id}`}
@@ -105,7 +105,7 @@ export function ShoppingListItemCard({
         <CardFooter>
           <div className="flex w-full items-center justify-center rounded-md bg-accent/10 p-3 text-center">
             <p className="text-sm font-medium text-accent-foreground">
-              Cheapest at <span className="capitalize font-bold">{cheapest.store}</span> for ${cheapest.price.toFixed(2)}
+              Più economico da <span className="capitalize font-bold">{cheapest.store}</span> a €{cheapest.price.toFixed(2)}
             </p>
           </div>
         </CardFooter>
