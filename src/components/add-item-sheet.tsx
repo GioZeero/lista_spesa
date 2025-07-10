@@ -66,11 +66,11 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
         <SheetHeader>
           <SheetTitle>Aggiungi un nuovo articolo</SheetTitle>
           <SheetDescription>
-            Inserisci i dettagli dell'articolo che vuoi aggiungere alla tua lista della spesa.
+            Inserisci i dettagli dell'articolo da aggiungere alla tua lista della spesa.
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
             <FormField
               control={form.control}
               name="name"
@@ -84,12 +84,12 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
                 </FormItem>
               )}
             />
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="quantity"
                 render={({ field }) => (
-                  <FormItem className="flex-1">
+                  <FormItem>
                     <FormLabel>Quantità</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="1" {...field} />
@@ -102,17 +102,17 @@ export function AddItemSheet({ children, open, onOpenChange, onAddItem }: AddIte
                 control={form.control}
                 name="unit"
                 render={({ field }) => (
-                  <FormItem className="flex-1">
+                  <FormItem>
                     <FormLabel>Unità</FormLabel>
                     <FormControl>
-                      <Input placeholder="kg" {...field} />
+                      <Input placeholder="kg, L, pz" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-            <Button type="submit" className="w-full">Aggiungi alla Lista</Button>
+            <Button type="submit" className="w-full" size="lg">Aggiungi alla Lista</Button>
           </form>
         </Form>
       </SheetContent>

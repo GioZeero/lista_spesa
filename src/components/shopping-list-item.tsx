@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useId } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ShoppingItem, Store } from "@/types";
 import { stores } from "@/types";
@@ -68,53 +68,73 @@ export function ShoppingListItemCard({
   
   const getFooterText = () => {
     if (selectedStore && prices[selectedStore]) {
-      return `Selezionato: ${selectedStore.charAt(0).toUpperCase() + selectedStore.slice(1)} a €${prices[selectedStore]!.toFixed(2)}`;
+      return `Selezionato: ${selectedStore.charAt(0).toUpperCase() + selectedStore.slice(1)}`;
     }
     if (cheapest) {
-      return `Più economico da ${cheapest.store} a €${cheapest.price.toFixed(2)}`;
+      return `Più economico da ${cheapest.store.charAt(0).toUpperCase() + cheapest.store.slice(1)}`;
     }
-    return null;
+    return "Nessun prezzo inserito";
   };
 
   const footerText = getFooterText();
 
+  const getPriceForFooter = () => {
+    if (selectedStore && prices[selectedStore]) {
+      return `€${prices[selectedStore]!.toFixed(2)}`;
+    }
+    if (cheapest) {
+      return `€${cheapest.price.toFixed(2)}`;
+    }
+    return "";
+  }
+
+  const priceText = getPriceForFooter();
+
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle className="flex items-start justify-between">
-          <span className="font-headline">{item.name}</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => onDelete(item.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Elimina Articolo</span>
-          </Button>
-        </CardTitle>
-        <CardDescription>
-          {item.quantity} {item.unit}
-        </CardDescription>
+    <Card className="flex flex-col transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+      <CardHeader className="flex-row items-start justify-between">
+        <div>
+          <CardTitle className="font-headline text-xl">{item.name}</CardTitle>
+          <CardDescription>
+            {item.quantity} {item.unit}
+          </CardDescription>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive rounded-full"
+          onClick={() => onDelete(item.id)}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">Elimina Articolo</span>
+        </Button>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
         <RadioGroup 
           value={selectedStore ?? ""}
           onValueChange={(value) => handleStoreSelectionChange(value as Store)}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="space-y-3"
         >
           {stores.map((store) => {
             const radioId = `${baseId}-${store}-radio`;
             const inputId = `${baseId}-${store}-input`;
+            const isCheapest = !selectedStore && cheapest?.store === store;
+            const isSelected = selectedStore === store;
+
             return (
-              <div key={store} className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <RadioGroupItem value={store} id={radioId} />
-                  <Label htmlFor={radioId} className="capitalize cursor-pointer">
-                    {store}
-                  </Label>
-                </div>
-                <div className="relative">
+              <div 
+                key={store} 
+                data-state={isSelected ? 'selected' : 'unselected'}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border p-3 transition-all",
+                  "data-[state=selected]:border-primary data-[state=selected]:ring-2 data-[state=selected]:ring-primary/50"
+                )}
+              >
+                <RadioGroupItem value={store} id={radioId} />
+                <Label htmlFor={radioId} className="flex-1 capitalize cursor-pointer text-base">
+                  {store}
+                </Label>
+                <div className="relative w-28">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                     €
                   </span>
@@ -126,8 +146,8 @@ export function ShoppingListItemCard({
                     value={prices[store] ?? ""}
                     onChange={(e) => handlePriceChange(store, e.target.value)}
                     className={cn(
-                      "pl-6",
-                      (selectedStore === store || (!selectedStore && cheapest?.store === store)) && "border-accent ring-2 ring-accent"
+                      "pl-7 text-right",
+                      isCheapest && "border-green-500/50"
                     )}
                   />
                 </div>
@@ -136,12 +156,16 @@ export function ShoppingListItemCard({
           })}
         </RadioGroup>
       </CardContent>
-      {isClient && footerText && (
+      {isClient && (
         <CardFooter>
-          <div className="flex w-full items-center justify-center rounded-md bg-accent/10 p-3 text-center">
-            <p className="text-sm font-medium text-accent-foreground">
-              {footerText}
-            </p>
+          <div className="flex w-full items-center justify-between rounded-lg bg-secondary p-3 text-center">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className={cn("h-5 w-5", (selectedStore || cheapest) ? "text-green-500" : "text-muted-foreground")} />
+              <p className="text-sm font-medium text-secondary-foreground">
+                {footerText}
+              </p>
+            </div>
+            <p className="text-lg font-bold text-foreground">{priceText}</p>
           </div>
         </CardFooter>
       )}

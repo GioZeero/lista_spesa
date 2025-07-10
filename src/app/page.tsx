@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, ShoppingCart } from "lucide-react";
+import { Plus, ShoppingCart, ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { AddItemSheet } from "@/components/add-item-sheet";
@@ -89,11 +89,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-10 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <ShoppingCart className="h-7 w-7 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight font-headline">
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl font-headline">
               SpesaIntelligente
             </h1>
           </div>
@@ -103,8 +103,9 @@ export default function Home() {
               onOpenChange={setIsSheetOpen}
               onAddItem={handleAddItem}
             >
-              <Button onClick={() => setIsSheetOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" /> Aggiungi Articolo
+              <Button onClick={() => setIsSheetOpen(true)} className="group">
+                 Aggiungi Articolo
+                 <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
               </Button>
             </AddItemSheet>
             <ModeToggle />
@@ -112,12 +113,16 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="mb-6 flex flex-col items-center justify-between gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:p-6">
-          <h2 className="text-xl font-semibold text-card-foreground">La Mia Lista della Spesa</h2>
+      <main className="container mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-lg border bg-card p-6 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-2xl font-bold text-card-foreground">La Mia Lista della Spesa</h2>
+            <p className="text-muted-foreground">Rivedi e gestisci gli articoli qui sotto.</p>
+          </div>
           {isClient && (
-            <div className="text-lg font-bold text-foreground">
-              Totale Stimato: €{totalCost}
+            <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+              <span>Totale Stimato:</span>
+              <span>€{totalCost}</span>
             </div>
           )}
         </div>
@@ -134,15 +139,15 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
-            <ShoppingCart className="h-16 w-16" />
+          <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
+            <ShoppingCart className="h-16 w-16 text-muted-foreground/50" />
             <h3 className="text-xl font-semibold">La tua lista è vuota</h3>
-            <p>Clicca "Aggiungi Articolo" per iniziare a compilare la tua lista della spesa.</p>
+            <p className="max-w-xs">Clicca "Aggiungi Articolo" per iniziare a compilare la tua lista della spesa e confrontare i prezzi.</p>
           </div>
         )}
       </main>
 
-      <footer className="py-6 text-center text-sm text-muted-foreground">
+      <footer className="py-8 text-center text-sm text-muted-foreground">
         {currentYear !== null && `© ${currentYear} SpesaIntelligente. Tutti i diritti riservati.`}
       </footer>
     </div>
