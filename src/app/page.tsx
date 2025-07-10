@@ -99,7 +99,7 @@ export default function Home() {
       <main className="container mx-auto p-4 sm:p-6 lg:p-8">
         <div className="mb-6 flex flex-col items-center justify-between gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:p-6">
           <h2 className="text-xl font-semibold text-card-foreground">La Mia Lista della Spesa</h2>
-          <div className="text-lg font-bold text-accent">
+          <div className="text-lg font-bold text-foreground">
             Totale Stimato: €{totalCost}
           </div>
         </div>
