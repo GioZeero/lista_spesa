@@ -31,7 +31,7 @@ interface ShoppingListItemProps {
 }
 
 const freshnessConfig: Record<Freshness, { color: string; label: string }> = {
-  green: { color: 'bg-green-500', label: 'Fresco (> 6 giorni)' },
+  green: { color: 'bg-blue-500', label: 'Fresco (> 6 giorni)' },
   yellow: { color: 'bg-yellow-500', label: 'In scadenza (3-6 giorni)' },
   red: { color: 'bg-red-500', label: 'Urgente (< 3 giorni)' },
 };
