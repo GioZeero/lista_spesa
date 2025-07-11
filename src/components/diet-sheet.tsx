@@ -41,20 +41,22 @@ const WEEK_DAYS: { key: keyof WeekPlan; label: string }[] = [
 
 export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheetProps) {
   const [dayTypes, setDayTypes] = useState<DayType[]>([]);
-  const [week, setWeek] = useState<WeekPlan>({
-    monday: null, tuesday: null, wednesday: null, thursday: null, 
-    friday: null, saturday: null, sunday: null
-  });
+  const [week, setWeek] = useState<WeekPlan | undefined>(undefined);
 
   useEffect(() => {
     if (initialDiet) {
-        setDayTypes(initialDiet.dayTypes);
-        setWeek(initialDiet.week);
+        setDayTypes(initialDiet.dayTypes || []);
+        setWeek(initialDiet.week || {
+            monday: null, tuesday: null, wednesday: null, thursday: null, 
+            friday: null, saturday: null, sunday: null
+        });
     }
   }, [initialDiet]);
 
   const handleSave = () => {
-    onSave({ dayTypes, week });
+    if (dayTypes && week) {
+        onSave({ dayTypes, week });
+    }
   };
 
   const addDayType = () => {
@@ -68,15 +70,16 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
 
   const removeDayType = (id: string) => {
     setDayTypes(dayTypes.filter((d) => d.id !== id));
-    // Also clear this day type from the week plan
-    const newWeek = { ...week };
-    Object.keys(newWeek).forEach(day => {
-      const d = day as keyof WeekPlan;
-      if (newWeek[d] === id) {
-        newWeek[d] = null;
-      }
-    });
-    setWeek(newWeek);
+    
+    if (week) {
+        const newWeek = { ...week };
+        (Object.keys(newWeek) as Array<keyof WeekPlan>).forEach(day => {
+            if (newWeek[day] === id) {
+                newWeek[day] = null;
+            }
+        });
+        setWeek(newWeek);
+    }
   };
   
   const updateDayTypeName = (id: string, name: string) => {
@@ -122,7 +125,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
   };
   
   const handleWeekDayChange = (day: keyof WeekPlan, dayTypeId: string) => {
-    setWeek(prev => ({ ...prev, [day]: dayTypeId === "none" ? null : dayTypeId }));
+    setWeek(prev => prev ? ({ ...prev, [day]: dayTypeId === "none" ? null : dayTypeId }) : undefined);
   };
 
 
@@ -140,7 +143,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
             <div>
               <h3 className="text-lg font-semibold mb-3">Piani Giornalieri</h3>
               <div className="space-y-4">
-                {dayTypes.map((dayType) => (
+                {dayTypes && dayTypes.map((dayType) => (
                   <div key={dayType.id} className="rounded-lg border p-4 space-y-4 bg-muted/50">
                     <div className="flex items-center gap-2">
                        <Input
@@ -173,30 +176,32 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
               </Button>
             </div>
 
-            <div className="border-t pt-6">
-               <h3 className="text-lg font-semibold mb-3">Piano Settimanale</h3>
-               <div className="grid grid-cols-1 gap-4">
-                 {WEEK_DAYS.map(({key, label}) => (
-                    <div key={key} className="flex items-center justify-between gap-4">
-                       <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
-                       <Select 
-                          value={week[key] || "none"}
-                          onValueChange={(value) => handleWeekDayChange(key, value)}
-                       >
-                         <SelectTrigger className="w-full">
-                           <SelectValue placeholder="Seleziona un piano..." />
-                         </SelectTrigger>
-                         <SelectContent>
-                           <SelectItem value="none">Nessuno</SelectItem>
-                           {dayTypes.map(d => (
-                             <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                    </div>
-                 ))}
-               </div>
-            </div>
+            {dayTypes && week && (
+                <div className="border-t pt-6">
+                   <h3 className="text-lg font-semibold mb-3">Piano Settimanale</h3>
+                   <div className="grid grid-cols-1 gap-4">
+                     {WEEK_DAYS.map(({key, label}) => (
+                        <div key={key} className="flex items-center justify-between gap-4">
+                           <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
+                           <Select 
+                              value={week[key] || "none"}
+                              onValueChange={(value) => handleWeekDayChange(key, value)}
+                           >
+                             <SelectTrigger className="w-full">
+                               <SelectValue placeholder="Seleziona un piano..." />
+                             </SelectTrigger>
+                             <SelectContent>
+                               <SelectItem value="none">Nessuno</SelectItem>
+                               {dayTypes.map(d => (
+                                 <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                        </div>
+                     ))}
+                   </div>
+                </div>
+            )}
           </div>
         </ScrollArea>
         <SheetFooter>
@@ -261,5 +266,3 @@ function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
         </div>
     )
 }
-
-    
