@@ -1,3 +1,4 @@
+
 export type Store = 'famila' | 'lidl' | 'primoprezzo';
 
 export const stores: Store[] = ['famila', 'lidl', 'primoprezzo'];
@@ -11,11 +12,15 @@ export type DietFoodItem = {
   prices: Partial<Record<Store, number>>;
 };
 
+export type MealType = 'breakfast' | 'lunch' | 'dinner';
+
 // Rappresenta un "giorno tipo" riutilizzabile
 export type DayType = {
   id: string;
   name: string;
-  items: DietFoodItem[];
+  breakfast: DietFoodItem[];
+  lunch: DietFoodItem[];
+  dinner: DietFoodItem[];
 };
 
 // Rappresenta l'assegnazione dei giorni tipo alla settimana

@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, User, Loader2 } from "lucide-react";
-import type { DietPlan, DayType, DietFoodItem, WeekPlan } from "@/types";
+import { Plus, Trash2, User, Loader2, Salad, Soup, Pizza } from "lucide-react";
+import type { DietPlan, DayType, DietFoodItem, WeekPlan, MealType } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,6 +32,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { ScrollArea } from "./ui/scroll-area";
 import { getDietPlan, getProfileIds } from "@/lib/firebase";
 import { Separator } from "./ui/separator";
@@ -52,6 +59,13 @@ const WEEK_DAYS: { key: keyof WeekPlan; label: string }[] = [
     { key: 'saturday', label: 'Sabato' },
     { key: 'sunday', label: 'Domenica' },
 ];
+
+const MEALS: { key: MealType, label: string, icon: React.FC<React.SVGProps<SVGSVGElement>> }[] = [
+    { key: 'breakfast', label: 'Colazione', icon: Pizza },
+    { key: 'lunch', label: 'Pranzo', icon: Soup },
+    { key: 'dinner', label: 'Cena', icon: Salad },
+];
+
 
 export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initialProfileId }: DietSheetProps) {
   const [currentProfileId, setCurrentProfileId] = useState(initialProfileId);
@@ -123,7 +137,9 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
     const newDay: DayType = {
       id: `day-type-${Date.now()}`,
       name: `Giorno ${(diet?.dayTypes.length || 0) + 1}`,
-      items: [],
+      breakfast: [],
+      lunch: [],
+      dinner: [],
     };
     updateDietState(d => ({ ...d, dayTypes: [...d.dayTypes, newDay]}));
   };
@@ -148,7 +164,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
     }));
   }
 
-  const addFoodItem = (dayTypeId: string) => {
+  const addFoodItem = (dayTypeId: string, meal: MealType) => {
     const newItem: DietFoodItem = {
       id: `food-${Date.now()}`,
       name: "",
@@ -159,30 +175,34 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
     updateDietState(d => ({
         ...d,
         dayTypes: d.dayTypes.map(dt =>
-            dt.id === dayTypeId ? { ...dt, items: [...dt.items, newItem] } : dt
+            dt.id === dayTypeId ? { ...dt, [meal]: [...(dt[meal] || []), newItem] } : dt
         )
     }));
   };
 
-  const updateFoodItem = (dayTypeId: string, updatedItem: DietFoodItem) => {
+  const updateFoodItem = (dayTypeId: string, meal: MealType, updatedItem: DietFoodItem) => {
     updateDietState(d => ({
         ...d,
-        dayTypes: d.dayTypes.map(dt =>
-            dt.id === dayTypeId
-            ? { ...dt, items: dt.items.map(i => i.id === updatedItem.id ? updatedItem : i) }
-            : dt
-        )
+        dayTypes: d.dayTypes.map(dt => {
+            if (dt.id !== dayTypeId) return dt;
+            return {
+                ...dt,
+                [meal]: (dt[meal] || []).map(i => i.id === updatedItem.id ? updatedItem : i)
+            }
+        })
     }));
   };
 
-  const removeFoodItem = (dayTypeId: string, itemId: string) => {
+  const removeFoodItem = (dayTypeId: string, meal: MealType, itemId: string) => {
      updateDietState(d => ({
         ...d,
-        dayTypes: d.dayTypes.map(dt =>
-            dt.id === dayTypeId
-            ? { ...dt, items: dt.items.filter(i => i.id !== itemId) }
-            : dt
-        )
+        dayTypes: d.dayTypes.map(dt => {
+            if (dt.id !== dayTypeId) return dt;
+            return {
+                ...dt,
+                [meal]: (dt[meal] || []).filter(i => i.id !== itemId)
+            }
+        })
     }));
   };
   
@@ -196,7 +216,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col sm:max-w-full w-full">
+      <SheetContent className="flex flex-col sm:max-w-xl w-full">
         <SheetHeader>
           <SheetTitle>Gestisci i Tuoi Piani Dieta</SheetTitle>
           <SheetDescription>
@@ -204,62 +224,66 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 pr-4 -mr-6">
-          <div className="space-y-6 py-4">
+          <Accordion type="multiple" defaultValue={['profiles', 'week-plan']} className="w-full space-y-6 py-4">
 
             {/* Profile Management */}
-            <div className="space-y-4 rounded-lg border p-4">
-               <h3 className="text-lg font-semibold flex items-center gap-2">
-                 <User className="w-5 h-5" />
-                 Gestione Profilo
-               </h3>
-               <div className="space-y-2">
-                  <label className="text-sm font-medium">Seleziona Profilo</label>
-                  <div className="flex gap-2 items-center">
-                   <Select value={currentProfileId} onValueChange={handleProfileChange}>
-                     <SelectTrigger>
-                       <SelectValue placeholder="Scegli un profilo..." />
-                     </SelectTrigger>
-                     <SelectContent>
-                       {profileIds.map(id => (
-                         <SelectItem key={id} value={id}>
-                            {id.charAt(0).toUpperCase() + id.slice(1)}
-                         </SelectItem>
-                       ))}
-                     </SelectContent>
-                   </Select>
-                   <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="icon" disabled={currentProfileId === initialProfileId}>
-                            <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Sei sicuro di voler eliminare questo profilo?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Questa azione non può essere annullata. Il profilo "<strong>{currentProfileId}</strong>" e tutti i suoi dati verranno eliminati permanentemente.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Annulla</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleDeleteConfirmed}>Elimina</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-               </div>
-               <div className="space-y-2">
-                  <label className="text-sm font-medium">O Creane Uno Nuovo</label>
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="Nome nuovo profilo..."
-                      value={newProfileName}
-                      onChange={(e) => setNewProfileName(e.target.value)}
-                    />
-                    <Button onClick={handleCreateProfile} disabled={!newProfileName.trim()}>Crea</Button>
-                  </div>
-               </div>
-            </div>
+             <AccordionItem value="profiles">
+                <AccordionTrigger className="text-lg font-semibold flex items-center gap-2 p-4 rounded-lg border bg-card data-[state=closed]:bg-muted/30">
+                     <User className="w-5 h-5" />
+                     Gestione Profilo
+                </AccordionTrigger>
+                <AccordionContent className="p-4 border border-t-0 rounded-b-lg">
+                   <div className="space-y-4">
+                       <div className="space-y-2">
+                          <label className="text-sm font-medium">Seleziona Profilo</label>
+                          <div className="flex gap-2 items-center">
+                           <Select value={currentProfileId} onValueChange={handleProfileChange}>
+                             <SelectTrigger>
+                               <SelectValue placeholder="Scegli un profilo..." />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {profileIds.map(id => (
+                                 <SelectItem key={id} value={id}>
+                                    {id.charAt(0).toUpperCase() + id.slice(1)}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                           <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="icon" disabled={currentProfileId === initialProfileId}>
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Sei sicuro di voler eliminare questo profilo?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Questa azione non può essere annullata. Il profilo "<strong>{currentProfileId}</strong>" e tutti i suoi dati verranno eliminati permanentemente.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                  <AlertDialogAction onClick={handleDeleteConfirmed}>Elimina</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-sm font-medium">O Creane Uno Nuovo</label>
+                          <div className="flex gap-2">
+                            <Input 
+                              placeholder="Nome nuovo profilo..."
+                              value={newProfileName}
+                              onChange={(e) => setNewProfileName(e.target.value)}
+                            />
+                            <Button onClick={handleCreateProfile} disabled={!newProfileName.trim()}>Crea</Button>
+                          </div>
+                       </div>
+                   </div>
+                </AccordionContent>
+             </AccordionItem>
             
             <Separator />
 
@@ -273,7 +297,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
                   <h3 className="text-lg font-semibold mb-3">Piani Giornalieri</h3>
                   <div className="space-y-4">
                     {diet.dayTypes && diet.dayTypes.map((dayType) => (
-                      <div key={dayType.id} className="rounded-lg border p-4 space-y-4 bg-muted/50">
+                      <div key={dayType.id} className="rounded-lg border p-4 space-y-4 bg-card">
                         <div className="flex items-center gap-2">
                           <Input
                             value={dayType.name}
@@ -284,19 +308,28 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
                             <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </div>
-                        <div className="space-y-2">
-                            {dayType.items.map(item => (
-                                <FoodItemRow 
-                                    key={item.id}
-                                    item={item}
-                                    onUpdate={(updated) => updateFoodItem(dayType.id, updated)}
-                                    onDelete={() => removeFoodItem(dayType.id, item.id)}
-                                />
+                        <div className="space-y-4">
+                            {MEALS.map(meal => (
+                                <div key={meal.key}>
+                                    <h4 className="font-semibold text-md mb-2 flex items-center gap-2 text-primary">
+                                       <meal.icon className="w-5 h-5" /> {meal.label}
+                                    </h4>
+                                    <div className="space-y-2 pl-4 border-l-2 border-primary/20">
+                                       {(dayType[meal.key] || []).map(item => (
+                                           <FoodItemRow 
+                                               key={item.id}
+                                               item={item}
+                                               onUpdate={(updated) => updateFoodItem(dayType.id, meal.key, updated)}
+                                               onDelete={() => removeFoodItem(dayType.id, meal.key, item.id)}
+                                           />
+                                       ))}
+                                       <Button variant="outline" size="sm" onClick={() => addFoodItem(dayType.id, meal.key)} className="w-full">
+                                         <Plus className="w-4 h-4 mr-2" /> Aggiungi Alimento a {meal.label}
+                                       </Button>
+                                    </div>
+                                </div>
                             ))}
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => addFoodItem(dayType.id)}>
-                          <Plus className="w-4 h-4 mr-2" /> Aggiungi Alimento
-                        </Button>
                       </div>
                     ))}
                   </div>
@@ -306,34 +339,38 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
                 </div>
 
                 {diet.dayTypes && diet.week && (
-                    <div className="border-t pt-6">
-                      <h3 className="text-lg font-semibold mb-3">Piano Settimanale</h3>
-                      <div className="grid grid-cols-1 gap-4">
-                        {WEEK_DAYS.map(({key, label}) => (
-                            <div key={key} className="flex items-center justify-between gap-4">
-                              <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
-                              <Select 
-                                  value={diet.week[key] || "none"}
-                                  onValueChange={(value) => handleWeekDayChange(key, value)}
-                              >
-                                <SelectTrigger className="w-full">
-                                  <SelectValue placeholder="Seleziona un piano..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">Nessuno</SelectItem>
-                                  {diet.dayTypes.map(d => (
-                                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                        ))}
-                      </div>
-                    </div>
+                    <AccordionItem value="week-plan" className="border-t pt-6">
+                      <AccordionTrigger className="text-lg font-semibold flex items-center gap-2 p-4 rounded-lg border bg-card data-[state=closed]:bg-muted/30">
+                        Piano Settimanale
+                      </AccordionTrigger>
+                      <AccordionContent className="p-4 border border-t-0 rounded-b-lg">
+                        <div className="grid grid-cols-1 gap-4">
+                          {WEEK_DAYS.map(({key, label}) => (
+                              <div key={key} className="flex items-center justify-between gap-4">
+                                <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
+                                <Select 
+                                    value={diet.week[key] || "none"}
+                                    onValueChange={(value) => handleWeekDayChange(key, value)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Seleziona un piano..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Nessuno</SelectItem>
+                                    {diet.dayTypes.map(d => (
+                                      <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                 )}
               </>
             )}
-          </div>
+          </Accordion>
         </ScrollArea>
         <SheetFooter>
           <Button onClick={handleSave} className="w-full" size="lg" disabled={loading || !diet}>Salva Dieta</Button>

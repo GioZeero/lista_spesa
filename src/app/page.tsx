@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList, deleteProfile } from "@/lib/firebase";
+import { ThemeProvider } from "@/components/theme-provider";
 
 
 const DEFAULT_PROFILE_ID = 'principale';
@@ -66,21 +67,26 @@ export default function Home() {
 
   const updateShoppingList = useCallback(async (allProfiles: Profiles) => {
     const aggregatedItems: { [key: string]: { name: string; quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
-  
+
     Object.values(allProfiles).forEach(currentDiet => {
       if (!currentDiet || !currentDiet.dayTypes) return;
-  
+
       const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
         if (dayTypeId) {
           acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
         }
         return acc;
       }, {} as Record<string, number>) : {};
-  
+
       currentDiet.dayTypes.forEach(dayType => {
-        if (!dayType.items) return;
-  
-        dayType.items.forEach(item => {
+        const meals = [
+          ...(dayType.breakfast || []), 
+          ...(dayType.lunch || []), 
+          ...(dayType.dinner || [])
+        ];
+        if (meals.length === 0) return;
+
+        meals.forEach(item => {
           if (!item.name) return;
           const key = item.name.toLowerCase();
           const usageCount = dayTypeUsageCount[dayType.id] || 0;
@@ -90,10 +96,9 @@ export default function Home() {
           if (usageCount > 0) {
             effectiveQuantity = baseQuantity * usageCount;
           } else {
-            // Keep the base quantity if the day type is not used in the week
             effectiveQuantity = baseQuantity;
           }
-  
+
           if (aggregatedItems[key]) {
             aggregatedItems[key].quantity += effectiveQuantity;
           } else {
@@ -107,11 +112,13 @@ export default function Home() {
         });
       });
     });
-  
+
     const existingList = await getShoppingList();
     const newList: ShoppingItem[] = [];
-  
+
     for (const data of Object.values(aggregatedItems)) {
+      if(data.quantity === 0) continue;
+      
       const finalQuantity = data.quantity >= 1000 ? data.quantity / 1000 : data.quantity;
       const finalUnit = data.quantity >= 1000 ? 'kg' : 'g';
       const sanitizedId = data.name.replace(/[.#$[\]]/g, '_').toLowerCase();
@@ -191,7 +198,7 @@ export default function Home() {
   const filteredAndSortedList = useMemo(() => {
     const freshnessOrder: Record<Freshness, number> = { red: 0, yellow: 1, green: 2 };
 
-    return shoppingList
+    return [...shoppingList]
       .filter(item =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
@@ -221,6 +228,12 @@ export default function Home() {
   }
 
   return (
+    <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -264,14 +277,10 @@ export default function Home() {
                 onDeleteProfile={handleDeleteProfile}
                 initialProfileId={DEFAULT_PROFILE_ID}
               />}
-              <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+              <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Globale</h2>
                   <p className="text-muted-foreground">Articoli da tutti i profili per una spesa efficiente.</p>
-                </div>
-                <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-                  <span>Costo Totale:</span>
-                  <span>€{totalCost}</span>
                 </div>
               </div>
               
@@ -320,11 +329,18 @@ export default function Home() {
           )}
         </main>
 
-        <footer className="py-8 text-center text-sm text-muted-foreground">
-            {year && <span>© {year} ShopSmart. Tutti i diritti riservati.</span>}
+        <footer className="sticky bottom-0 mt-auto w-full border-t border-border/40 bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="container mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
+              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+                  <span>Costo Totale Stimato:</span>
+                  <span>€{totalCost}</span>
+              </div>
+              <p className="text-center text-sm text-muted-foreground">
+                  {year && <span>© {year} ShopSmart. Tutti i diritti riservati.</span>}
+              </p>
+            </div>
         </footer>
       </div>
+    </ThemeProvider>
   );
 }
-
-    

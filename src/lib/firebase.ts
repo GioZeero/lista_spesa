@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getDatabase, ref, get, set, remove, update } from "firebase/database";
 import type { DietPlan, Profiles, ShoppingItem } from "@/types";
@@ -50,7 +51,16 @@ export const getDietPlan = async (profileId: string): Promise<DietPlan> => {
     const snapshot = await get(dietPlanRef);
 
     if (snapshot.exists()) {
-        return snapshot.val() as DietPlan;
+        const plan = snapshot.val() as DietPlan;
+        // Ensure meal arrays exist to prevent runtime errors
+        if (plan.dayTypes) {
+            plan.dayTypes.forEach(dt => {
+                dt.breakfast = dt.breakfast || [];
+                dt.lunch = dt.lunch || [];
+                dt.dinner = dt.dinner || [];
+            });
+        }
+        return plan;
     } else {
         const defaultPlan: DietPlan = {
             dayTypes: [],
@@ -106,14 +116,14 @@ export const getShoppingList = async (): Promise<ShoppingItem[]> => {
 export const updateShoppingItem = async (item: ShoppingItem): Promise<void> => {
     const db = getDb();
     // Using item id as the key in the JSON tree. Sanitize the ID to be Firebase-key-friendly.
-    const sanitizedId = item.id.replace(/[.#$[\]]/g, '_');
+    const sanitizedId = item.id.replace(/[.#$[\]]/g, '_').toLowerCase();
     const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${sanitizedId}`);
     await set(itemRef, { ...item, id: sanitizedId });
 };
 
 export const deleteShoppingItem = async (itemId: string): Promise<void> => {
     const db = getDb();
-    const sanitizedId = itemId.replace(/[.#$[\]]/g, '_');
+    const sanitizedId = itemId.replace(/[.#$[\]]/g, '_').toLowerCase();
     const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${sanitizedId}`);
     await remove(itemRef);
 }
@@ -129,7 +139,7 @@ export const batchUpdateShoppingList = async (items: ShoppingItem[]): Promise<vo
     // 2. Prepare the new list and track IDs
     const newItemsMap: Record<string, ShoppingItem> = {};
     items.forEach(item => {
-        const sanitizedId = item.id.replace(/[.#$[\]]/g, '_');
+        const sanitizedId = item.id.replace(/[.#$[\]]/g, '_').toLowerCase();
         newItemsMap[sanitizedId] = { ...item, id: sanitizedId };
     });
 
