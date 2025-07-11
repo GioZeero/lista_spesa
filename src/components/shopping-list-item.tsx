@@ -39,7 +39,7 @@ export function ShoppingListItemCard({
   item,
   onUpdate,
 }: ShoppingListItemProps) {
-  const [prices, setPrices] = useState(item.prices);
+  const [prices, setPrices] = useState(item.prices || {});
   const [freshness, setFreshness] = useState<Freshness>(item.freshness);
 
   const handlePriceChange = (store: Store, value: string) => {
@@ -140,7 +140,7 @@ export function ShoppingListItemCard({
                           id={`${item.id}-${store}`}
                           type="number"
                           step="0.01"
-                          value={prices[store] ?? ""}
+                          value={prices[store as keyof typeof prices] ?? ""}
                           onChange={(e) => handlePriceChange(store, e.target.value)}
                           placeholder="0.00"
                           className="pl-6 text-right"
