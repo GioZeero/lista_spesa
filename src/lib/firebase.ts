@@ -120,20 +120,44 @@ export const deleteShoppingItem = async (itemId: string): Promise<void> => {
 
 export const batchUpdateShoppingList = async (items: ShoppingItem[]): Promise<void> => {
     const db = getDb();
-    const updates: { [key: string]: ShoppingItem | null } = {};
-    const sanitizedItems = items.map(item => {
-        const sanitizedId = item.id.replace(/[.#$[\]]/g, '_');
-        return { ...item, id: sanitizedId };
-    });
-
-    // First, clear the existing list
-    const listRef = ref(db, SHOPPING_LIST_PATH);
-    await set(listRef, null);
-
-    // Then, add the new items
-    sanitizedItems.forEach(item => {
-        updates[`${SHOPPING_LIST_PATH}/${item.id}`] = item;
-    });
+    const dbRef = ref(db);
     
-    await update(ref(db), updates);
+    // 1. Get current shopping list from DB
+    const existingListSnapshot = await get(ref(db, SHOPPING_LIST_PATH));
+    const existingList: Record<string, ShoppingItem> = existingListSnapshot.val() || {};
+    
+    // 2. Prepare the new list and track IDs
+    const newItemsMap: Record<string, ShoppingItem> = {};
+    items.forEach(item => {
+        const sanitizedId = item.id.replace(/[.#$[\]]/g, '_');
+        newItemsMap[sanitizedId] = { ...item, id: sanitizedId };
+    });
+
+    const existingIds = Object.keys(existingList);
+    const newIds = Object.keys(newItemsMap);
+
+    // 3. Prepare batch updates
+    const updates: { [key: string]: ShoppingItem | null } = {};
+
+    // 3a. Add/update items
+    for (const id of newIds) {
+        // Add or update if the item is new or different from the existing one
+        // This avoids unnecessary writes for items that haven't changed (e.g., prices, freshness)
+        updates[`${SHOPPING_LIST_PATH}/${id}`] = {
+            ...(existingList[id] || {}), // Preserve existing data like prices/freshness
+            ...newItemsMap[id],          // Overwrite with new data like quantity/unit
+        };
+    }
+
+    // 3b. Remove items that are no longer in the diet plans
+    for (const id of existingIds) {
+        if (!newItemsMap[id]) {
+            updates[`${SHOPPING_LIST_PATH}/${id}`] = null; // Mark for deletion
+        }
+    }
+
+    // 4. Execute the atomic batch update
+    if (Object.keys(updates).length > 0) {
+        await update(dbRef, updates);
+    }
 };
