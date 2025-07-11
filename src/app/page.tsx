@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { ShoppingCart, NotebookPen, Utensils, Search } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { ShoppingCart, NotebookPen, Utensils, Search, Loader2 } from "lucide-react";
 import type { ShoppingItem, DietPlan, Store, Freshness } from "@/types";
 import { DietSheet } from "@/components/diet-sheet";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -15,70 +15,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-
-const initialDiet: DietPlan = {
-  dayTypes: [
-    {
-      id: "day-type-1",
-      name: "Giorno 1",
-      items: [
-        { id: 'item-1', name: 'Petto di Pollo', quantity: 200, unit: 'g' },
-        { id: 'item-2', name: 'Riso Basmati', quantity: 80, unit: 'g' },
-        { id: 'item-3', name: 'Broccoli', quantity: 150, unit: 'g' },
-      ],
-    },
-    {
-      id: "day-type-2",
-      name: "Giorno 2",
-      items: [
-        { id: 'item-4', name: 'Salmone', quantity: 180, unit: 'g' },
-        { id: 'item-5', name: 'Quinoa', quantity: 80, unit: 'g' },
-        { id: 'item-6', name: 'Spinaci Freschi', quantity: 200, unit: 'g' },
-      ],
-    }
-  ],
-  week: {
-    monday: "day-type-1",
-    tuesday: "day-type-2",
-    wednesday: "day-type-1",
-    thursday: "day-type-2",
-    friday: "day-type-1",
-    saturday: "day-type-2",
-    sunday: "day-type-1",
-  },
-};
-
-const itemPrices: Record<string, ShoppingItem['prices']> = {
-  'Petto di Pollo': { famila: 10.50, lidl: 9.80, primoprezzo: 11.00 },
-  'Riso Basmati': { famila: 4.50, lidl: 4.20, primoprezzo: 4.80 },
-  'Broccoli': { famila: 2.80, lidl: 2.50, primoprezzo: 3.00 },
-  'Salmone': { famila: 22.00, lidl: 20.50, primoprezzo: 23.00 },
-  'Quinoa': { famila: 8.00, lidl: 7.50, primoprezzo: 8.50 },
-  'Spinaci Freschi': { famila: 3.50, lidl: 3.20, primoprezzo: 3.80 },
-};
+import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem } from "@/lib/firebase";
 
 
 export default function Home() {
-  const [diet, setDiet] = useState<DietPlan>(initialDiet);
+  const [diet, setDiet] = useState<DietPlan | null>(null);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("default");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setIsClient(true);
+  const fetchInitialData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const dietData = await getDietPlan();
+      const shoppingListData = await getShoppingList();
+      
+      setDiet(dietData);
+      
+      if (shoppingListData.length > 0) {
+        setShoppingList(shoppingListData);
+      } else if (dietData) {
+        // Generate shopping list from diet if it doesn't exist yet
+        updateShoppingList(dietData);
+      }
+
+    } catch (error) {
+      console.error("Error fetching data from Firebase:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (isClient) {
-      updateShoppingList(diet);
-    }
-  }, [diet, isClient]);
+    fetchInitialData();
+  }, [fetchInitialData]);
 
-  const updateShoppingList = (currentDiet: DietPlan) => {
-    const aggregatedItems: { [key: string]: { quantity: number; unit: string } } = {};
+  const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
+    const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
 
     Object.values(currentDiet.week).forEach(dayTypeId => {
       if (!dayTypeId) return;
@@ -94,38 +69,54 @@ export default function Home() {
             aggregatedItems[item.name] = {
               quantity: quantityInGrams,
               unit: 'g',
+              prices: item.prices || {},
             };
           }
         });
       }
     });
 
-    const newList: ShoppingItem[] = Object.entries(aggregatedItems).map(([name, data], index) => {
-      const quantityInKg = data.quantity / 1000;
-      return {
-        id: `shopping-item-${index}`,
-        name,
-        quantity: parseFloat(quantityInKg.toFixed(2)),
-        unit: 'kg',
-        prices: itemPrices[name] || {},
-        freshness: 'green',
-        isHighlighted: false,
+    const newList: ShoppingItem[] = await Promise.all(
+      Object.entries(aggregatedItems).map(async ([name, data]) => {
+        const quantityInKg = data.quantity / 1000;
+        const existingItem = shoppingList.find(i => i.name === name);
+        const newItem: ShoppingItem = {
+          id: name, // Use name as a persistent ID
+          name,
+          quantity: parseFloat(quantityInKg.toFixed(2)),
+          unit: 'kg',
+          prices: existingItem?.prices || data.prices, // Preserve existing prices
+          freshness: existingItem?.freshness || 'green',
+          isHighlighted: existingItem?.isHighlighted || false,
+        };
+        await updateShoppingItem(newItem); // Create or update in DB
+        return newItem;
+      })
+    );
+    
+    // Remove items that are no longer in the diet
+    for (const item of shoppingList) {
+      if (!newList.some(i => i.name === item.name)) {
+        // await deleteShoppingItem(item.id); // Optional: decide if you want to delete or just hide
       }
-    });
+    }
 
     setShoppingList(newList);
-  };
+  }, [shoppingList]);
   
-  const handleUpdateItem = (updatedItem: ShoppingItem) => {
+  const handleUpdateItem = async (updatedItem: ShoppingItem) => {
     setShoppingList((prevItems) =>
       prevItems.map((item) =>
         item.id === updatedItem.id ? updatedItem : item
       )
     );
+    await updateShoppingItem(updatedItem);
   };
 
-  const handleSaveDiet = (newDiet: DietPlan) => {
+  const handleSaveDiet = async (newDiet: DietPlan) => {
+    await updateDietPlan(newDiet);
     setDiet(newDiet);
+    await updateShoppingList(newDiet);
     setIsSheetOpen(false);
   };
 
@@ -164,7 +155,8 @@ export default function Home() {
           case 'highlighted':
             return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
           default:
-            return 0;
+            // Default sort might be by name if nothing else
+            return a.name.localeCompare(b.name);
         }
       });
   }, [shoppingList, searchQuery, sortOrder]);
@@ -181,7 +173,7 @@ export default function Home() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => setIsSheetOpen(true)} className="group">
+            <Button onClick={() => setIsSheetOpen(true)} className="group" disabled={loading}>
                Gestisci Dieta
                <NotebookPen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
             </Button>
@@ -190,29 +182,33 @@ export default function Home() {
         </div>
       </header>
 
-      <DietSheet
+      {diet && <DietSheet
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         onSave={handleSaveDiet}
         initialDiet={diet}
-      />
+      />}
 
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-        {isClient && (
-          <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
-              <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+        {loading ? (
+            <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <h3 className="text-xl font-semibold">Caricamento dati...</h3>
+                <p className="max-w-xs">Recupero del tuo piano spesa da Firebase.</p>
             </div>
-            <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-              <span>Costo Totale:</span>
-              <span>€{totalCost}</span>
-            </div>
-          </div>
-        )}
-        
-        {isClient && (
+        ) : (
           <>
+            <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
+                <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+              </div>
+              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+                <span>Costo Totale:</span>
+                <span>€{totalCost}</span>
+              </div>
+            </div>
+            
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                <div className="relative lg:col-span-3">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -251,8 +247,8 @@ export default function Home() {
             ) : (
               <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
                 <Utensils className="h-16 w-16 text-muted-foreground/50" />
-                <h3 className="text-xl font-semibold">Nessun risultato</h3>
-                <p className="max-w-xs">Prova a modificare la ricerca o i filtri. Se la lista è vuota, clicca "Gestisci Dieta" per iniziare.</p>
+                <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
+                <p className="max-w-xs">La tua lista della spesa è vuota. Clicca su "Gestisci Dieta" per iniziare ad aggiungere alimenti.</p>
               </div>
             )}
           </>
@@ -260,10 +256,10 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
-        {isClient && (
           <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
-        )}
       </footer>
     </div>
   );
 }
+
+    

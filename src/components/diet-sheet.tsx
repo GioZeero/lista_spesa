@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import type { DietPlan, DayType, DietFoodItem, WeekPlan } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,18 @@ const WEEK_DAYS: { key: keyof WeekPlan; label: string }[] = [
 ];
 
 export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheetProps) {
-  const [dayTypes, setDayTypes] = useState<DayType[]>(initialDiet.dayTypes);
-  const [week, setWeek] = useState<WeekPlan>(initialDiet.week);
+  const [dayTypes, setDayTypes] = useState<DayType[]>([]);
+  const [week, setWeek] = useState<WeekPlan>({
+    monday: null, tuesday: null, wednesday: null, thursday: null, 
+    friday: null, saturday: null, sunday: null
+  });
+
+  useEffect(() => {
+    if (initialDiet) {
+        setDayTypes(initialDiet.dayTypes);
+        setWeek(initialDiet.week);
+    }
+  }, [initialDiet]);
 
   const handleSave = () => {
     onSave({ dayTypes, week });
@@ -68,6 +78,10 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
     });
     setWeek(newWeek);
   };
+  
+  const updateDayTypeName = (id: string, name: string) => {
+    setDayTypes(dayTypes.map(d => d.id === id ? {...d, name} : d));
+  }
 
   const addFoodItem = (dayTypeId: string) => {
     const newItem: DietFoodItem = {
@@ -75,6 +89,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
       name: "",
       quantity: 0,
       unit: "g",
+      prices: {},
     };
     setDayTypes(
       dayTypes.map((d) =>
@@ -128,7 +143,11 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
                 {dayTypes.map((dayType) => (
                   <div key={dayType.id} className="rounded-lg border p-4 space-y-4 bg-muted/50">
                     <div className="flex items-center gap-2">
-                      <p className="font-bold text-base flex-grow">{dayType.name}</p>
+                       <Input
+                         value={dayType.name}
+                         onChange={(e) => updateDayTypeName(dayType.id, e.target.value)}
+                         className="font-bold text-base flex-grow"
+                       />
                       <Button variant="ghost" size="icon" onClick={() => removeDayType(dayType.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -196,23 +215,25 @@ interface FoodItemRowProps {
 }
 
 function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
-    // Use local state for the quantity input to allow it to be an empty string
     const [quantityInput, setQuantityInput] = useState<string>(item.quantity > 0 ? String(item.quantity) : '');
+
+    useEffect(() => {
+        setQuantityInput(item.quantity > 0 ? String(item.quantity) : '');
+    }, [item.quantity]);
 
     const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        // Allow empty string or numbers
         if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
             setQuantityInput(value);
-            // Update the parent state with a valid number, or 0 if empty
             onUpdate({ ...item, quantity: parseFloat(value) || 0 });
         }
     };
     
-    // Sync local state if the prop changes from outside
-    useState(() => {
-        setQuantityInput(item.quantity > 0 ? String(item.quantity) : '');
-    });
+    const handleBlur = () => {
+        if (quantityInput === '') {
+            onUpdate({ ...item, quantity: 0 });
+        }
+    };
 
     return (
         <div className="flex items-center gap-2 p-2 rounded-md bg-background">
@@ -223,16 +244,11 @@ function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
               className="flex-grow"
             />
             <Input
-              type="text" // Use text to allow empty string
-              inputMode="decimal" // Better for mobile keyboards
+              type="text" 
+              inputMode="decimal"
               value={quantityInput}
               onChange={handleQuantityChange}
-              onBlur={() => {
-                // Optional: format or validate on blur
-                if (quantityInput === '') {
-                  onUpdate({ ...item, quantity: 0 });
-                }
-              }}
+              onBlur={handleBlur}
               placeholder="0"
               className="w-20"
             />
@@ -245,3 +261,5 @@ function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
         </div>
     )
 }
+
+    

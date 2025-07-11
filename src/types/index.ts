@@ -8,6 +8,7 @@ export type DietFoodItem = {
   name: string;
   quantity: number;
   unit: string; // es. 'kg', 'g', 'L', 'ml', 'pezzi'
+  prices: Partial<Record<Store, number>>;
 };
 
 // Rappresenta un "giorno tipo" riutilizzabile
@@ -38,7 +39,7 @@ export type Freshness = 'green' | 'yellow' | 'red';
 
 // Rappresenta un articolo nella lista della spesa finale
 export type ShoppingItem = {
-  id: string;
+  id: string; // Will be the item name for simplicity
   name: string;
   quantity: number;
   unit: string;
@@ -46,3 +47,5 @@ export type ShoppingItem = {
   freshness: Freshness;
   isHighlighted: boolean;
 };
+
+    
