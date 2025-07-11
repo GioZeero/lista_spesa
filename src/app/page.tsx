@@ -30,6 +30,28 @@ export default function Home() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const fetchInitialData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const dietData = await getDietPlan();
+      const shoppingListData = await getShoppingList();
+      
+      setDiet(dietData);
+      setShoppingList(shoppingListData);
+
+    } catch (error) {
+      console.error("Error fetching data from Firebase:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchInitialData();
+    }
+  }, [isClient, fetchInitialData]);
 
   const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
     const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
@@ -84,26 +106,6 @@ export default function Home() {
 
     setShoppingList(newList);
   }, []);
-  
-  const fetchInitialData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const dietData = await getDietPlan();
-      const shoppingListData = await getShoppingList();
-      
-      setDiet(dietData);
-      setShoppingList(shoppingListData);
-
-    } catch (error) {
-      console.error("Error fetching data from Firebase:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
 
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
     setShoppingList((prevItems) =>
@@ -184,7 +186,7 @@ export default function Home() {
         </div>
       </header>
 
-      {diet && <DietSheet
+      {isClient && diet && <DietSheet
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         onSave={handleSaveDiet}
@@ -200,16 +202,18 @@ export default function Home() {
             </div>
         ) : (
           <>
-            <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
-                <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+            {isClient && (
+              <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
+                  <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+                </div>
+                <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+                  <span>Costo Totale:</span>
+                  <span>€{totalCost}</span>
+                </div>
               </div>
-              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-                <span>Costo Totale:</span>
-                <span>€{totalCost}</span>
-              </div>
-            </div>
+            )}
             
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                <div className="relative lg:col-span-3">
@@ -236,7 +240,7 @@ export default function Home() {
                </div>
             </div>
 
-            {filteredAndSortedList.length > 0 ? (
+            {isClient && filteredAndSortedList.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredAndSortedList.map((item) => (
                   <ShoppingListItemCard
@@ -247,11 +251,13 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
-                <Utensils className="h-16 w-16 text-muted-foreground/50" />
-                <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
-                <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
-              </div>
+             isClient && (
+                <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
+                  <Utensils className="h-16 w-16 text-muted-foreground/50" />
+                  <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
+                  <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
+                </div>
+              )
             )}
           </>
         )}
