@@ -61,8 +61,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    updateShoppingList(diet);
-  }, [diet]);
+    if (isClient) {
+      updateShoppingList(diet);
+    }
+  }, [diet, isClient]);
 
   const updateShoppingList = (currentDiet: DietPlan) => {
     const aggregatedItems: { [key: string]: { quantity: number; unit: string } } = {};
@@ -163,38 +165,38 @@ export default function Home() {
       />
 
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-        <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
-            <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
-          </div>
-          {isClient && (
-            <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-              <span>Costo Totale:</span>
-              <span>€{totalCost}</span>
+        {isClient && (
+          <>
+            <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
+                <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+              </div>
+              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+                <span>Costo Totale:</span>
+                <span>€{totalCost}</span>
+              </div>
             </div>
-          )}
-        </div>
 
-        {isClient ? (
-          shoppingList.length > 0 ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {shoppingList.map((item) => (
-                <ShoppingListItemCard
-                  key={item.id}
-                  item={item}
-                  onUpdate={handleUpdateItem}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
-              <Utensils className="h-16 w-16 text-muted-foreground/50" />
-              <h3 className="text-xl font-semibold">La tua dieta è vuota</h3>
-              <p className="max-w-xs">Clicca "Gestisci Dieta" per iniziare a compilare il tuo piano settimanale.</p>
-            </div>
-          )
-        ) : null}
+            {shoppingList.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {shoppingList.map((item) => (
+                  <ShoppingListItemCard
+                    key={item.id}
+                    item={item}
+                    onUpdate={handleUpdateItem}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
+                <Utensils className="h-16 w-16 text-muted-foreground/50" />
+                <h3 className="text-xl font-semibold">La tua dieta è vuota</h3>
+                <p className="max-w-xs">Clicca "Gestisci Dieta" per iniziare a compilare il tuo piano settimanale.</p>
+              </div>
+            )}
+          </>
+        )}
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
