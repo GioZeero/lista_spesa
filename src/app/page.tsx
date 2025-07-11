@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, deleteShoppingItem } from "@/lib/firebase";
+import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, deleteShoppingItem, batchUpdateShoppingList } from "@/lib/firebase";
 
 
 export default function Home() {
@@ -26,6 +26,8 @@ export default function Home() {
   const [sortOrder, setSortOrder] = useState("default");
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+
 
   useEffect(() => {
     setIsClient(true);
@@ -33,6 +35,7 @@ export default function Home() {
   
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
+    setFirebaseError(null);
     try {
       const dietData = await getDietPlan();
       const shoppingListData = await getShoppingList();
@@ -40,8 +43,13 @@ export default function Home() {
       setDiet(dietData);
       setShoppingList(shoppingListData);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching data from Firebase:", error);
+      if (error.message.includes("FIREBASE FATAL ERROR")) {
+        setFirebaseError(error.message);
+      } else {
+        setFirebaseError("An unknown error occurred while connecting to the database.");
+      }
     } finally {
       setLoading(false);
     }
@@ -63,6 +71,7 @@ export default function Home() {
         dayType.items.forEach(item => {
           if (!item.name || item.quantity <= 0) return;
           const key = item.name.toLowerCase();
+          // Assume all quantities are in grams for aggregation
           const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
           
           if (aggregatedItems[key]) {
@@ -82,10 +91,13 @@ export default function Home() {
     const newList: ShoppingItem[] = [];
 
     for (const [name, data] of Object.entries(aggregatedItems)) {
+        // Convert back to kg for display
         const quantityInKg = data.quantity / 1000;
-        const existingItem = existingList.find(i => i.name.toLowerCase() === name);
+        const sanitizedId = name.replace(/[.#$[\]]/g, '_');
+        const existingItem = existingList.find(i => i.id === sanitizedId);
+        
         const newItem: ShoppingItem = {
-          id: existingItem?.id || name,
+          id: sanitizedId,
           name: name.charAt(0).toUpperCase() + name.slice(1),
           quantity: parseFloat(quantityInKg.toFixed(2)),
           unit: 'kg',
@@ -93,17 +105,11 @@ export default function Home() {
           freshness: existingItem?.freshness || 'green',
           isHighlighted: existingItem?.isHighlighted || false,
         };
-        await updateShoppingItem(newItem);
         newList.push(newItem);
     }
     
-    // Delete items from Firebase that are no longer in the diet
-    for (const item of existingList) {
-      if (!newList.some(i => i.id === item.id)) {
-        await deleteShoppingItem(item.id);
-      }
-    }
-
+    // Using batch update for efficiency
+    await batchUpdateShoppingList(newList);
     setShoppingList(newList);
   }, []);
 
@@ -160,13 +166,29 @@ export default function Home() {
           case 'highlighted':
             return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
           default:
+            // Default sort is alphabetical
             return a.name.localeCompare(b.name);
         }
       });
   }, [shoppingList, searchQuery, sortOrder]);
 
   if (!isClient) {
+    // Render nothing on the server to avoid hydration errors
     return null;
+  }
+  
+  if (firebaseError) {
+    return (
+        <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground p-4">
+            <div className="max-w-md text-center">
+                <h2 className="text-2xl font-bold text-destructive mb-4">Errore di Configurazione Firebase</h2>
+                <p className="text-muted-foreground mb-6">{firebaseError}</p>
+                <p className="text-sm text-muted-foreground">
+                    Assicurati di aver impostato correttamente le variabili d'ambiente nel file <code className="bg-muted px-1 py-0.5 rounded">.env</code>, in particolare <code className="bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_FIREBASE_DATABASE_URL</code>.
+                </p>
+            </div>
+        </div>
+    );
   }
 
   return (
@@ -263,7 +285,7 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
+          {isClient && <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>}
       </footer>
     </div>
   );

@@ -1,5 +1,5 @@
-import { initializeApp, type FirebaseOptions } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch, deleteDoc } from "firebase/firestore";
+import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
+import { getDatabase, ref, get, set, remove, update } from "firebase/database";
 import type { DietPlan, ShoppingItem } from "@/types";
 
 const firebaseConfig: FirebaseOptions = {
@@ -9,21 +9,38 @@ const firebaseConfig: FirebaseOptions = {
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+function getFirebaseApp() {
+    if (getApps().length > 0) {
+        return getApp();
+    }
+    
+    // Throw an error if the database URL is not set, as it's crucial for Realtime Database.
+    if (!firebaseConfig.databaseURL) {
+        throw new Error("FIREBASE FATAL ERROR: NEXT_PUBLIC_FIREBASE_DATABASE_URL is not set in .env. Please provide the full URL of your Realtime Database.");
+    }
 
-const DIET_PLAN_DOC_ID = "main-diet-plan";
+    return initializeApp(firebaseConfig);
+}
+
+const getDb = () => {
+    const app = getFirebaseApp();
+    return getDatabase(app);
+}
+
+const DIET_PLAN_PATH = "dietPlans/main-diet-plan";
 
 // --- Diet Plan Functions ---
 
 export const getDietPlan = async (): Promise<DietPlan> => {
-    const docRef = doc(db, "dietPlans", DIET_PLAN_DOC_ID);
-    const docSnap = await getDoc(docRef);
+    const db = getDb();
+    const dietPlanRef = ref(db, DIET_PLAN_PATH);
+    const snapshot = await get(dietPlanRef);
 
-    if (docSnap.exists()) {
-        return docSnap.data() as DietPlan;
+    if (snapshot.exists()) {
+        return snapshot.val() as DietPlan;
     } else {
         // Return a default empty structure if it doesn't exist
         const defaultPlan: DietPlan = {
@@ -44,36 +61,59 @@ export const getDietPlan = async (): Promise<DietPlan> => {
 };
 
 export const updateDietPlan = async (dietPlan: DietPlan): Promise<void> => {
-    const docRef = doc(db, "dietPlans", DIET_PLAN_DOC_ID);
-    await setDoc(docRef, dietPlan, { merge: true });
+    const db = getDb();
+    const dietPlanRef = ref(db, DIET_PLAN_PATH);
+    await set(dietPlanRef, dietPlan);
 };
 
 
 // --- Shopping List Functions ---
 
-const SHOPPING_LIST_COLLECTION = "shoppingList";
+const SHOPPING_LIST_PATH = "shoppingList";
 
 export const getShoppingList = async (): Promise<ShoppingItem[]> => {
-    const querySnapshot = await getDocs(collection(db, SHOPPING_LIST_COLLECTION));
-    return querySnapshot.docs.map(doc => doc.data() as ShoppingItem);
+    const db = getDb();
+    const listRef = ref(db, SHOPPING_LIST_PATH);
+    const snapshot = await get(listRef);
+    if (snapshot.exists()) {
+        const data = snapshot.val();
+        // Convert object of items back to an array
+        return Object.values(data) as ShoppingItem[];
+    }
+    return [];
 };
 
 export const updateShoppingItem = async (item: ShoppingItem): Promise<void> => {
-    // Using item name as the document ID for simplicity and persistence
-    const docRef = doc(db, SHOPPING_LIST_COLLECTION, item.id); 
-    await setDoc(docRef, item, { merge: true });
+    const db = getDb();
+    // Using item id as the key in the JSON tree. Sanitize the ID to be Firebase-key-friendly.
+    const sanitizedId = item.id.replace(/[.#$[\]]/g, '_');
+    const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${sanitizedId}`);
+    await set(itemRef, { ...item, id: sanitizedId });
 };
 
 export const deleteShoppingItem = async (itemId: string): Promise<void> => {
-    const docRef = doc(db, SHOPPING_LIST_COLLECTION, itemId);
-    await deleteDoc(docRef);
+    const db = getDb();
+    const sanitizedId = itemId.replace(/[.#$[\]]/g, '_');
+    const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${sanitizedId}`);
+    await remove(itemRef);
 }
 
 export const batchUpdateShoppingList = async (items: ShoppingItem[]): Promise<void> => {
-    const batch = writeBatch(db);
-    items.forEach(item => {
-        const docRef = doc(db, SHOPPING_LIST_COLLECTION, item.id);
-        batch.set(docRef, item, { merge: true });
+    const db = getDb();
+    const updates: { [key: string]: ShoppingItem | null } = {};
+    const sanitizedItems = items.map(item => {
+        const sanitizedId = item.id.replace(/[.#$[\]]/g, '_');
+        return { ...item, id: sanitizedId };
     });
-    await batch.commit();
+
+    // First, clear the existing list
+    const listRef = ref(db, SHOPPING_LIST_PATH);
+    await set(listRef, null);
+
+    // Then, add the new items
+    sanitizedItems.forEach(item => {
+        updates[`${SHOPPING_LIST_PATH}/${item.id}`] = item;
+    });
+    
+    await update(ref(db), updates);
 };
