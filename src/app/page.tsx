@@ -71,7 +71,6 @@ export default function Home() {
         dayType.items.forEach(item => {
           if (!item.name) return;
           const key = item.name.toLowerCase();
-          // Assume all quantities are in grams for aggregation
           const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
           
           if (aggregatedItems[key]) {
@@ -91,7 +90,6 @@ export default function Home() {
     const newList: ShoppingItem[] = [];
 
     for (const [name, data] of Object.entries(aggregatedItems)) {
-        // Convert back to kg for display if quantity > 999g, otherwise keep as g
         const finalQuantity = data.quantity >= 1000 ? data.quantity / 1000 : data.quantity;
         const finalUnit = data.quantity >= 1000 ? 'kg' : 'g';
         const sanitizedId = name.replace(/[.#$[\]]/g, '_');
@@ -109,7 +107,6 @@ export default function Home() {
         newList.push(newItem);
     }
     
-    // Using batch update for efficiency
     await batchUpdateShoppingList(newList);
     setShoppingList(newList);
   }, []);
@@ -167,7 +164,6 @@ export default function Home() {
           case 'highlighted':
             return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
           default:
-            // Default sort is alphabetical
             return a.name.localeCompare(b.name);
         }
       });
