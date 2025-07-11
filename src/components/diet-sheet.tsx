@@ -117,7 +117,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex flex-col sm:max-w-xl">
+      <SheetContent className="flex flex-col sm:max-w-full w-full">
         <SheetHeader>
           <SheetTitle>Gestisci il Tuo Piano Dieta</SheetTitle>
           <SheetDescription>
