@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import type { DietPlan, DayType, DietFoodItem, WeekPlan } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
