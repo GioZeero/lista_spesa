@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permette a chiunque di leggere e scrivere nella collezione dietPlans.
+    // In un'app reale, si dovrebbe limitare l'accesso agli utenti autenticati.
+    match /dietPlans/{dietPlanId} {
+      allow read, write: if true;
+    }
+
+    // Permette a chiunque di leggere e scrivere nella collezione shoppingList.
+    // In un'app reale, si dovrebbe limitare l'accesso agli utenti autenticati.
+    match /shoppingList/{itemId} {
+      allow read, write: if true;
+    }
+  }
+}
