@@ -77,9 +77,15 @@ export default function Home() {
         const key = item.name.toLowerCase();
         
         const usageCount = dayTypeUsageCount[dayType.id] || 0;
-        const baseQuantity = item.quantity || 0;
+        let baseQuantity = item.quantity || 0;
+
+        if (usageCount === 0) {
+            baseQuantity = item.quantity;
+        } else {
+            baseQuantity *= usageCount;
+        }
         
-        const quantityInGrams = (item.unit.toLowerCase() === 'g' ? baseQuantity : baseQuantity * 1000) * (usageCount > 0 ? usageCount : 1);
+        const quantityInGrams = (item.unit.toLowerCase() === 'g' ? baseQuantity : baseQuantity * 1000);
 
         if (aggregatedItems[key]) {
           aggregatedItems[key].quantity += quantityInGrams;
@@ -175,6 +181,11 @@ export default function Home() {
         }
       });
   }, [shoppingList, searchQuery, sortOrder]);
+  
+  const [year, setYear] = useState<number | null>(null);
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
 
   if (!isClient) {
     return null;
@@ -281,7 +292,7 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
+          {year && <span>© {year} ShopSmart. Tutti i diritti riservati.</span>}
       </footer>
     </div>
   );
