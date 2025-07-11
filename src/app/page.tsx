@@ -64,19 +64,21 @@ export default function Home() {
   const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
     const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
 
-    // Iterate over all day types to collect all possible food items
+    const dayTypeUsageCount = Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
+        if (dayTypeId) {
+            acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+
     currentDiet.dayTypes.forEach(dayType => {
       dayType.items.forEach(item => {
-        if (!item.name) return; // Skip if item has no name
+        if (!item.name) return;
         const key = item.name.toLowerCase();
-        
-        let quantityInGrams = 0;
-        // Check if the dayType is actually used in the week to aggregate quantities
-        const isDayTypeUsed = Object.values(currentDiet.week).includes(dayType.id);
-        if (isDayTypeUsed) {
-          quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
-        }
+        const usageCount = dayTypeUsageCount[dayType.id] || 0;
 
+        const quantityInGrams = (item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000) * usageCount;
+        
         if (aggregatedItems[key]) {
           aggregatedItems[key].quantity += quantityInGrams;
         } else {
@@ -112,7 +114,7 @@ export default function Home() {
     
     await batchUpdateShoppingList(newList);
     setShoppingList(newList);
-}, []);
+  }, []);
 
 
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
@@ -135,11 +137,11 @@ export default function Home() {
 
   const totalCost = useMemo(() => {
     return shoppingList.reduce((total, item) => {
-      const validPrices = Object.values(item.prices).filter(price => typeof price === 'number' && price > 0);
+      const prices = Object.values(item.prices).filter((price): price is number => typeof price === 'number' && price > 0);
   
-      if (validPrices.length === 0) return total;
+      if (prices.length === 0) return total;
   
-      const cheapestPrice = Math.min(...validPrices as number[]);
+      const cheapestPrice = Math.min(...prices);
       const familaPrice = item.prices.famila;
   
       let selectedPrice = cheapestPrice;
@@ -150,7 +152,7 @@ export default function Home() {
       return total + selectedPrice * item.quantity;
     }, 0).toFixed(2);
   }, [shoppingList]);
-
+  
   const filteredAndSortedList = useMemo(() => {
     const freshnessOrder: Record<Freshness, number> = { red: 0, yellow: 1, green: 2 };
 
@@ -196,13 +198,6 @@ export default function Home() {
         </div>
       </header>
 
-      {diet && <DietSheet
-        open={isSheetOpen}
-        onOpenChange={setIsSheetOpen}
-        onSave={handleSaveDiet}
-        initialDiet={diet}
-      />}
-
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
         {firebaseError ? (
             <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
@@ -220,6 +215,12 @@ export default function Home() {
             </div>
         ) : (
           <>
+            {diet && <DietSheet
+              open={isSheetOpen}
+              onOpenChange={setIsSheetOpen}
+              onSave={handleSaveDiet}
+              initialDiet={diet}
+            />}
             <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
               <div>
                 <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
