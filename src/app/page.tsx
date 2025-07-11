@@ -165,6 +165,9 @@ export default function Home() {
       });
   }, [shoppingList, searchQuery, sortOrder]);
 
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -186,7 +189,7 @@ export default function Home() {
         </div>
       </header>
 
-      {isClient && diet && <DietSheet
+      {diet && <DietSheet
         open={isSheetOpen}
         onOpenChange={setIsSheetOpen}
         onSave={handleSaveDiet}
@@ -194,7 +197,7 @@ export default function Home() {
       />}
 
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-        {(loading || !isClient) ? (
+        {loading ? (
             <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h3 className="text-xl font-semibold">Caricamento dati...</h3>
@@ -202,18 +205,16 @@ export default function Home() {
             </div>
         ) : (
           <>
-            {isClient && (
-              <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
-                <div>
-                  <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
-                  <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
-                </div>
-                <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-                  <span>Costo Totale:</span>
-                  <span>€{totalCost}</span>
-                </div>
+            <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
+                <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
               </div>
-            )}
+              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+                <span>Costo Totale:</span>
+                <span>€{totalCost}</span>
+              </div>
+            </div>
             
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                <div className="relative lg:col-span-3">
@@ -240,7 +241,7 @@ export default function Home() {
                </div>
             </div>
 
-            {isClient && filteredAndSortedList.length > 0 ? (
+            {filteredAndSortedList.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredAndSortedList.map((item) => (
                   <ShoppingListItemCard
@@ -251,23 +252,19 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-             isClient && (
-                <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
-                  <Utensils className="h-16 w-16 text-muted-foreground/50" />
-                  <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
-                  <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
-                </div>
-              )
+              <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
+                <Utensils className="h-16 w-16 text-muted-foreground/50" />
+                <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
+                <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
+              </div>
             )}
           </>
         )}
       </main>
 
-      {isClient && (
-        <footer className="py-8 text-center text-sm text-muted-foreground">
-            <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
-        </footer>
-      )}
+      <footer className="py-8 text-center text-sm text-muted-foreground">
+          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
+      </footer>
     </div>
   );
 }
