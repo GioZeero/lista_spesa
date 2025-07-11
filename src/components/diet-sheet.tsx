@@ -157,17 +157,25 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
             <div className="border-t pt-6">
                <h3 className="text-lg font-semibold mb-3">Piano Settimanale</h3>
                <div className="grid grid-cols-1 gap-4">
-                 {WEEK_DAYS.map(({key, label}) => {
-                    const assignedDayType = dayTypes.find(d => d.id === week[key]);
-                    return (
-                       <div key={key} className="flex items-center justify-between gap-4">
-                          <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
-                          <div className="flex-grow text-right text-muted-foreground">
-                            {assignedDayType ? assignedDayType.name : 'Nessuno'}
-                          </div>
-                       </div>
-                    );
-                 })}
+                 {WEEK_DAYS.map(({key, label}) => (
+                    <div key={key} className="flex items-center justify-between gap-4">
+                       <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
+                       <Select 
+                          value={week[key] || "none"}
+                          onValueChange={(value) => handleWeekDayChange(key, value)}
+                       >
+                         <SelectTrigger className="w-full">
+                           <SelectValue placeholder="Seleziona un piano..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="none">Nessuno</SelectItem>
+                           {dayTypes.map(d => (
+                             <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                    </div>
+                 ))}
                </div>
             </div>
           </div>
@@ -188,6 +196,24 @@ interface FoodItemRowProps {
 }
 
 function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
+    // Use local state for the quantity input to allow it to be an empty string
+    const [quantityInput, setQuantityInput] = useState<string>(item.quantity > 0 ? String(item.quantity) : '');
+
+    const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        // Allow empty string or numbers
+        if (value === '' || /^[0-9]*\.?[0-9]*$/.test(value)) {
+            setQuantityInput(value);
+            // Update the parent state with a valid number, or 0 if empty
+            onUpdate({ ...item, quantity: parseFloat(value) || 0 });
+        }
+    };
+    
+    // Sync local state if the prop changes from outside
+    useState(() => {
+        setQuantityInput(item.quantity > 0 ? String(item.quantity) : '');
+    });
+
     return (
         <div className="flex items-center gap-2 p-2 rounded-md bg-background">
             <Input
@@ -197,9 +223,17 @@ function FoodItemRow({ item, onUpdate, onDelete }: FoodItemRowProps) {
               className="flex-grow"
             />
             <Input
-              type="number"
-              value={item.quantity}
-              onChange={(e) => onUpdate({ ...item, quantity: parseFloat(e.target.value) || 0 })}
+              type="text" // Use text to allow empty string
+              inputMode="decimal" // Better for mobile keyboards
+              value={quantityInput}
+              onChange={handleQuantityChange}
+              onBlur={() => {
+                // Optional: format or validate on blur
+                if (quantityInput === '') {
+                  onUpdate({ ...item, quantity: 0 });
+                }
+              }}
+              placeholder="0"
               className="w-20"
             />
             <div className="w-20 flex items-center justify-center">
