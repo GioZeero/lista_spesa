@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseOptions } from "firebase/app";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch, deleteDoc } from "firebase/firestore";
 import type { DietPlan, ShoppingItem } from "@/types";
 
 const firebaseConfig: FirebaseOptions = {
@@ -59,18 +59,21 @@ export const getShoppingList = async (): Promise<ShoppingItem[]> => {
 };
 
 export const updateShoppingItem = async (item: ShoppingItem): Promise<void> => {
-    // Using item name as the document ID for simplicity
-    const docRef = doc(db, SHOPPING_LIST_COLLECTION, item.name); 
+    // Using item name as the document ID for simplicity and persistence
+    const docRef = doc(db, SHOPPING_LIST_COLLECTION, item.id); 
     await setDoc(docRef, item, { merge: true });
 };
+
+export const deleteShoppingItem = async (itemId: string): Promise<void> => {
+    const docRef = doc(db, SHOPPING_LIST_COLLECTION, itemId);
+    await deleteDoc(docRef);
+}
 
 export const batchUpdateShoppingList = async (items: ShoppingItem[]): Promise<void> => {
     const batch = writeBatch(db);
     items.forEach(item => {
-        const docRef = doc(db, SHOPPING_LIST_COLLECTION, item.name);
+        const docRef = doc(db, SHOPPING_LIST_COLLECTION, item.id);
         batch.set(docRef, item, { merge: true });
     });
     await batch.commit();
 };
-
-    

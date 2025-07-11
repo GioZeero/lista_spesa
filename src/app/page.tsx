@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem } from "@/lib/firebase";
+import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, deleteShoppingItem } from "@/lib/firebase";
 
 
 export default function Home() {
@@ -25,7 +25,66 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("default");
   const [loading, setLoading] = useState(true);
+  const [isClient, setIsClient] = useState(false);
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
+    const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
+
+    Object.values(currentDiet.week).forEach(dayTypeId => {
+      if (!dayTypeId) return;
+      const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
+      if (dayType) {
+        dayType.items.forEach(item => {
+          if (!item.name || item.quantity <= 0) return;
+          const key = item.name.toLowerCase();
+          const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
+          
+          if (aggregatedItems[key]) {
+            aggregatedItems[key].quantity += quantityInGrams;
+          } else {
+            aggregatedItems[key] = {
+              quantity: quantityInGrams,
+              unit: 'g',
+              prices: item.prices || {},
+            };
+          }
+        });
+      }
+    });
+
+    const existingList = await getShoppingList();
+    const newList: ShoppingItem[] = [];
+
+    for (const [name, data] of Object.entries(aggregatedItems)) {
+        const quantityInKg = data.quantity / 1000;
+        const existingItem = existingList.find(i => i.name.toLowerCase() === name);
+        const newItem: ShoppingItem = {
+          id: existingItem?.id || name,
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          quantity: parseFloat(quantityInKg.toFixed(2)),
+          unit: 'kg',
+          prices: existingItem?.prices || data.prices,
+          freshness: existingItem?.freshness || 'green',
+          isHighlighted: existingItem?.isHighlighted || false,
+        };
+        await updateShoppingItem(newItem);
+        newList.push(newItem);
+    }
+    
+    // Delete items from Firebase that are no longer in the diet
+    for (const item of existingList) {
+      if (!newList.some(i => i.id === item.id)) {
+        await deleteShoppingItem(item.id);
+      }
+    }
+
+    setShoppingList(newList);
+  }, []);
+  
   const fetchInitialData = useCallback(async () => {
     setLoading(true);
     try {
@@ -33,13 +92,7 @@ export default function Home() {
       const shoppingListData = await getShoppingList();
       
       setDiet(dietData);
-      
-      if (shoppingListData.length > 0) {
-        setShoppingList(shoppingListData);
-      } else if (dietData) {
-        // Generate shopping list from diet if it doesn't exist yet
-        updateShoppingList(dietData);
-      }
+      setShoppingList(shoppingListData);
 
     } catch (error) {
       console.error("Error fetching data from Firebase:", error);
@@ -52,58 +105,6 @@ export default function Home() {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
-    const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
-
-    Object.values(currentDiet.week).forEach(dayTypeId => {
-      if (!dayTypeId) return;
-      const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
-      if (dayType) {
-        dayType.items.forEach(item => {
-          if (!item.name || item.quantity <= 0) return;
-          const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
-          
-          if (aggregatedItems[item.name]) {
-            aggregatedItems[item.name].quantity += quantityInGrams;
-          } else {
-            aggregatedItems[item.name] = {
-              quantity: quantityInGrams,
-              unit: 'g',
-              prices: item.prices || {},
-            };
-          }
-        });
-      }
-    });
-
-    const newList: ShoppingItem[] = await Promise.all(
-      Object.entries(aggregatedItems).map(async ([name, data]) => {
-        const quantityInKg = data.quantity / 1000;
-        const existingItem = shoppingList.find(i => i.name === name);
-        const newItem: ShoppingItem = {
-          id: name, // Use name as a persistent ID
-          name,
-          quantity: parseFloat(quantityInKg.toFixed(2)),
-          unit: 'kg',
-          prices: existingItem?.prices || data.prices, // Preserve existing prices
-          freshness: existingItem?.freshness || 'green',
-          isHighlighted: existingItem?.isHighlighted || false,
-        };
-        await updateShoppingItem(newItem); // Create or update in DB
-        return newItem;
-      })
-    );
-    
-    // Remove items that are no longer in the diet
-    for (const item of shoppingList) {
-      if (!newList.some(i => i.name === item.name)) {
-        // await deleteShoppingItem(item.id); // Optional: decide if you want to delete or just hide
-      }
-    }
-
-    setShoppingList(newList);
-  }, [shoppingList]);
-  
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
     setShoppingList((prevItems) =>
       prevItems.map((item) =>
@@ -114,10 +115,12 @@ export default function Home() {
   };
 
   const handleSaveDiet = async (newDiet: DietPlan) => {
+    setLoading(true);
     await updateDietPlan(newDiet);
     setDiet(newDiet);
     await updateShoppingList(newDiet);
     setIsSheetOpen(false);
+    setLoading(false);
   };
 
   const totalCost = useMemo(() => shoppingList.reduce((total, item) => {
@@ -155,7 +158,6 @@ export default function Home() {
           case 'highlighted':
             return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
           default:
-            // Default sort might be by name if nothing else
             return a.name.localeCompare(b.name);
         }
       });
@@ -190,7 +192,7 @@ export default function Home() {
       />}
 
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-        {loading ? (
+        {(loading || !isClient) ? (
             <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h3 className="text-xl font-semibold">Caricamento dati...</h3>
@@ -248,18 +250,18 @@ export default function Home() {
               <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
                 <Utensils className="h-16 w-16 text-muted-foreground/50" />
                 <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
-                <p className="max-w-xs">La tua lista della spesa è vuota. Clicca su "Gestisci Dieta" per iniziare ad aggiungere alimenti.</p>
+                <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
               </div>
             )}
           </>
         )}
       </main>
 
-      <footer className="py-8 text-center text-sm text-muted-foreground">
-          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
-      </footer>
+      {isClient && (
+        <footer className="py-8 text-center text-sm text-muted-foreground">
+            <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
+        </footer>
+      )}
     </div>
   );
 }
-
-    
