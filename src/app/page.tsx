@@ -64,26 +64,29 @@ export default function Home() {
   const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
     const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
 
-    Object.values(currentDiet.week).forEach(dayTypeId => {
-      if (!dayTypeId) return;
-      const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
-      if (dayType) {
-        dayType.items.forEach(item => {
-          if (!item.name) return;
-          const key = item.name.toLowerCase();
-          const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
-          
-          if (aggregatedItems[key]) {
-            aggregatedItems[key].quantity += quantityInGrams;
-          } else {
-            aggregatedItems[key] = {
-              quantity: quantityInGrams,
-              unit: 'g',
-              prices: item.prices || {},
-            };
-          }
-        });
-      }
+    // Iterate over all day types to collect all possible food items
+    currentDiet.dayTypes.forEach(dayType => {
+      dayType.items.forEach(item => {
+        if (!item.name) return; // Skip if item has no name
+        const key = item.name.toLowerCase();
+        
+        let quantityInGrams = 0;
+        // Check if the dayType is actually used in the week to aggregate quantities
+        const isDayTypeUsed = Object.values(currentDiet.week).includes(dayType.id);
+        if (isDayTypeUsed) {
+          quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
+        }
+
+        if (aggregatedItems[key]) {
+          aggregatedItems[key].quantity += quantityInGrams;
+        } else {
+          aggregatedItems[key] = {
+            quantity: quantityInGrams,
+            unit: 'g',
+            prices: item.prices || {},
+          };
+        }
+      });
     });
 
     const existingList = await getShoppingList();
@@ -109,7 +112,7 @@ export default function Home() {
     
     await batchUpdateShoppingList(newList);
     setShoppingList(newList);
-  }, []);
+}, []);
 
 
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
@@ -172,20 +175,6 @@ export default function Home() {
   if (!isClient) {
     return null;
   }
-  
-  if (firebaseError) {
-    return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground p-4">
-            <div className="max-w-md text-center">
-                <h2 className="text-2xl font-bold text-destructive mb-4">Errore di Configurazione Firebase</h2>
-                <p className="text-muted-foreground mb-6">{firebaseError}</p>
-                <p className="text-sm text-muted-foreground">
-                    Assicurati di aver impostato correttamente le variabili d'ambiente nel file <code className="bg-muted px-1 py-0.5 rounded">.env</code>, in particolare <code className="bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_FIREBASE_DATABASE_URL</code>.
-                </p>
-            </div>
-        </div>
-    );
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -215,7 +204,15 @@ export default function Home() {
       />}
 
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-        {loading ? (
+        {firebaseError ? (
+            <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
+                 <h2 className="text-2xl font-bold text-destructive mb-4">Errore di Configurazione Firebase</h2>
+                 <p className="text-muted-foreground mb-6">{firebaseError}</p>
+                 <p className="text-sm text-muted-foreground">
+                     Assicurati di aver impostato correttamente le variabili d'ambiente nel file <code className="bg-muted px-1 py-0.5 rounded">.env</code>, in particolare <code className="bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_FIREBASE_DATABASE_URL</code>.
+                 </p>
+            </div>
+        ) : loading ? (
             <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
                 <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <h3 className="text-xl font-semibold">Caricamento dati...</h3>
