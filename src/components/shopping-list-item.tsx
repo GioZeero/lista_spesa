@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useState } from "react";
@@ -68,16 +69,18 @@ export function ShoppingListItemCard({
   };
 
   const autoSelectedStore = useMemo(() => {
-    if (!prices) return null;
-    const validPrices = Object.entries(prices)
+    const currentPrices = prices || {};
+    const validPrices = Object.entries(currentPrices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
       .map(([store, price]) => ({ store: store as Store, price: price! }));
 
-    if (validPrices.length === 0) return null;
+    if (validPrices.length === 0) {
+      return null;
+    }
 
     const cheapest = validPrices.reduce((min, p) => (p.price < min.price ? p : min));
-    
-    const familaPrice = prices.famila;
+    const familaPrice = currentPrices.famila;
+
     if (familaPrice !== undefined && familaPrice !== null && familaPrice <= cheapest.price * 1.20) {
       return { store: 'famila' as Store, price: familaPrice };
     }
