@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList } from "@/lib/firebase";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from '@/components/theme-provider';
 
 
 const DEFAULT_PROFILE_ID = 'principale';
@@ -86,7 +86,7 @@ export default function Home() {
                 const key = item.name.toLowerCase();
                 const usageCount = dayTypeUsageCount[dayType.id] || 0;
                 const baseQuantity = item.quantity || 0;
-
+                
                 let effectiveQuantity = 0;
                 if (usageCount > 0) {
                     effectiveQuantity = baseQuantity * usageCount;
@@ -188,15 +188,16 @@ export default function Home() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) => {
-        if (a.isHighlighted !== b.isHighlighted) {
-          return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
-        }
         switch (sortOrder) {
           case 'alphabetical':
             return a.name.localeCompare(b.name);
           case 'freshness':
             return freshnessOrder[a.freshness] - freshnessOrder[b.freshness];
+          case 'default':
           default:
+            if (a.isHighlighted !== b.isHighlighted) {
+              return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
+            }
             return a.name.localeCompare(b.name);
         }
       });
