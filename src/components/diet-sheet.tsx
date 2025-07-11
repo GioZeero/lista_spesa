@@ -69,10 +69,6 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
     setWeek(newWeek);
   };
 
-  const updateDayTypeName = (id: string, name: string) => {
-    setDayTypes(dayTypes.map((d) => (d.id === id ? { ...d, name } : d)));
-  };
-
   const addFoodItem = (dayTypeId: string) => {
     const newItem: DietFoodItem = {
       id: `food-${Date.now()}`,
@@ -132,12 +128,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
                 {dayTypes.map((dayType) => (
                   <div key={dayType.id} className="rounded-lg border p-4 space-y-4 bg-muted/50">
                     <div className="flex items-center gap-2">
-                      <Input
-                        value={dayType.name}
-                        onChange={(e) => updateDayTypeName(dayType.id, e.target.value)}
-                        className="font-bold text-base"
-                        readOnly
-                      />
+                      <p className="font-bold text-base flex-grow">{dayType.name}</p>
                       <Button variant="ghost" size="icon" onClick={() => removeDayType(dayType.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -166,25 +157,17 @@ export function DietSheet({ open, onOpenChange, onSave, initialDiet }: DietSheet
             <div className="border-t pt-6">
                <h3 className="text-lg font-semibold mb-3">Piano Settimanale</h3>
                <div className="grid grid-cols-1 gap-4">
-                 {WEEK_DAYS.map(({key, label}) => (
-                   <div key={key} className="flex items-center justify-between gap-4">
-                      <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
-                      <Select
-                        value={week[key] ?? "none"}
-                        onValueChange={(value) => handleWeekDayChange(key, value)}
-                      >
-                        <SelectTrigger id={`day-select-${key}`}>
-                          <SelectValue placeholder="Seleziona un piano..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Nessuno</SelectItem>
-                          {dayTypes.map(d => (
-                            <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                   </div>
-                 ))}
+                 {WEEK_DAYS.map(({key, label}) => {
+                    const assignedDayType = dayTypes.find(d => d.id === week[key]);
+                    return (
+                       <div key={key} className="flex items-center justify-between gap-4">
+                          <p className="font-medium text-base w-24 flex-shrink-0">{label}</p>
+                          <div className="flex-grow text-right text-muted-foreground">
+                            {assignedDayType ? assignedDayType.name : 'Nessuno'}
+                          </div>
+                       </div>
+                    );
+                 })}
                </div>
             </div>
           </div>
