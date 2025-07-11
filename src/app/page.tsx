@@ -91,9 +91,9 @@ export default function Home() {
     const newList: ShoppingItem[] = [];
 
     for (const [name, data] of Object.entries(aggregatedItems)) {
-        // Convert back to kg for display if quantity is not 0, otherwise keep as is
-        const finalQuantity = data.quantity > 0 ? data.quantity / 1000 : 0;
-        const finalUnit = data.quantity > 0 ? 'kg' : 'g';
+        // Convert back to kg for display if quantity > 999g, otherwise keep as g
+        const finalQuantity = data.quantity >= 1000 ? data.quantity / 1000 : data.quantity;
+        const finalUnit = data.quantity >= 1000 ? 'kg' : 'g';
         const sanitizedId = name.replace(/[.#$[\]]/g, '_');
         const existingItem = existingList.find(i => i.id === sanitizedId);
         
@@ -113,6 +113,7 @@ export default function Home() {
     await batchUpdateShoppingList(newList);
     setShoppingList(newList);
   }, []);
+
 
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
     setShoppingList((prevItems) =>
@@ -286,7 +287,7 @@ export default function Home() {
       </main>
 
       <footer className="py-8 text-center text-sm text-muted-foreground">
-          {isClient && <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>}
+          <span>© {new Date().getFullYear()} ShopSmart. Tutti i diritti riservati.</span>
       </footer>
     </div>
   );
