@@ -13,15 +13,15 @@ const firebaseConfig: FirebaseOptions = {
 };
 
 function getFirebaseApp() {
+    // Basic validation for the databaseURL
+    if (!firebaseConfig.databaseURL || !firebaseConfig.databaseURL.startsWith('https')) {
+        throw new Error("FIREBASE FATAL ERROR: Invalid or missing NEXT_PUBLIC_FIREBASE_DATABASE_URL in .env file. Please provide the full URL of your Realtime Database (e.g., https://<your-project>.firebaseio.com).");
+    }
+
     if (getApps().length > 0) {
         return getApp();
     }
     
-    // Throw an error if the database URL is not set, as it's crucial for Realtime Database.
-    if (!firebaseConfig.databaseURL) {
-        throw new Error("FIREBASE FATAL ERROR: NEXT_PUBLIC_FIREBASE_DATABASE_URL is not set in .env. Please provide the full URL of your Realtime Database.");
-    }
-
     return initializeApp(firebaseConfig);
 }
 
