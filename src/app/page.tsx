@@ -69,7 +69,7 @@ export default function Home() {
       const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
       if (dayType) {
         dayType.items.forEach(item => {
-          if (!item.name || item.quantity <= 0) return;
+          if (!item.name) return;
           const key = item.name.toLowerCase();
           // Assume all quantities are in grams for aggregation
           const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
@@ -91,16 +91,17 @@ export default function Home() {
     const newList: ShoppingItem[] = [];
 
     for (const [name, data] of Object.entries(aggregatedItems)) {
-        // Convert back to kg for display
-        const quantityInKg = data.quantity / 1000;
+        // Convert back to kg for display if quantity is not 0, otherwise keep as is
+        const finalQuantity = data.quantity > 0 ? data.quantity / 1000 : 0;
+        const finalUnit = data.quantity > 0 ? 'kg' : 'g';
         const sanitizedId = name.replace(/[.#$[\]]/g, '_');
         const existingItem = existingList.find(i => i.id === sanitizedId);
         
         const newItem: ShoppingItem = {
           id: sanitizedId,
           name: name.charAt(0).toUpperCase() + name.slice(1),
-          quantity: parseFloat(quantityInKg.toFixed(2)),
-          unit: 'kg',
+          quantity: parseFloat(finalQuantity.toFixed(2)),
+          unit: finalUnit,
           prices: existingItem?.prices || data.prices,
           freshness: existingItem?.freshness || 'green',
           isHighlighted: existingItem?.isHighlighted || false,
