@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList } from "@/lib/firebase";
+import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList, deleteProfile } from "@/lib/firebase";
 import { ThemeProvider } from '@/components/theme-provider';
 
 
@@ -158,6 +158,14 @@ export default function Home() {
     setLoading(false);
   };
 
+  const handleDeleteProfile = async (profileId: string) => {
+    setLoading(true);
+    await deleteProfile(profileId);
+    const allProfiles = await getAllDietPlans();
+    await updateShoppingList(allProfiles);
+    setLoading(false);
+  };
+
   const totalCost = useMemo(() => {
     return shoppingList.reduce((total, item) => {
       const prices = item.prices || {};
@@ -259,6 +267,7 @@ export default function Home() {
                 open={isSheetOpen}
                 onOpenChange={setIsSheetOpen}
                 onSave={handleSaveDiet}
+                onDeleteProfile={handleDeleteProfile}
                 initialProfileId={DEFAULT_PROFILE_ID}
               />}
               <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">

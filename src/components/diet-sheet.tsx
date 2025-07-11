@@ -20,6 +20,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { ScrollArea } from "./ui/scroll-area";
 import { getDietPlan, getProfileIds } from "@/lib/firebase";
 import { Separator } from "./ui/separator";
@@ -28,6 +39,7 @@ interface DietSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (profileId: string, diet: DietPlan) => void;
+  onDeleteProfile: (profileId: string) => void;
   initialProfileId: string;
 }
 
@@ -41,7 +53,7 @@ const WEEK_DAYS: { key: keyof WeekPlan; label: string }[] = [
     { key: 'sunday', label: 'Domenica' },
 ];
 
-export function DietSheet({ open, onOpenChange, onSave, initialProfileId }: DietSheetProps) {
+export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initialProfileId }: DietSheetProps) {
   const [currentProfileId, setCurrentProfileId] = useState(initialProfileId);
   const [profileIds, setProfileIds] = useState<string[]>([]);
   const [newProfileName, setNewProfileName] = useState("");
@@ -85,6 +97,16 @@ export function DietSheet({ open, onOpenChange, onSave, initialProfileId }: Diet
       setNewProfileName("");
     }
   };
+
+  const handleDeleteConfirmed = async () => {
+    if (currentProfileId === initialProfileId) return;
+    
+    await onDeleteProfile(currentProfileId);
+    
+    const newProfileIds = profileIds.filter(id => id !== currentProfileId);
+    setProfileIds(newProfileIds);
+    setCurrentProfileId(initialProfileId);
+  }
 
 
   const handleSave = () => {
@@ -192,6 +214,7 @@ export function DietSheet({ open, onOpenChange, onSave, initialProfileId }: Diet
                </h3>
                <div className="space-y-2">
                   <label className="text-sm font-medium">Seleziona Profilo</label>
+                  <div className="flex gap-2 items-center">
                    <Select value={currentProfileId} onValueChange={handleProfileChange}>
                      <SelectTrigger>
                        <SelectValue placeholder="Scegli un profilo..." />
@@ -204,6 +227,26 @@ export function DietSheet({ open, onOpenChange, onSave, initialProfileId }: Diet
                        ))}
                      </SelectContent>
                    </Select>
+                   <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="icon" disabled={currentProfileId === initialProfileId}>
+                            <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Sei sicuro di voler eliminare questo profilo?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Questa azione non può essere annullata. Il profilo "<strong>{currentProfileId}</strong>" e tutti i suoi dati verranno eliminati permanentemente.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDeleteConfirmed}>Elimina</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                </div>
                <div className="space-y-2">
                   <label className="text-sm font-medium">O Creane Uno Nuovo</label>

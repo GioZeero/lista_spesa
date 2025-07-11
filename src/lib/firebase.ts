@@ -80,6 +80,12 @@ export const updateDietPlan = async (profileId: string, dietPlan: DietPlan): Pro
     await set(dietPlanRef, dietPlan);
 };
 
+export const deleteProfile = async (profileId: string): Promise<void> => {
+    const db = getDb();
+    const profileRef = ref(db, `${DIET_PLANS_ROOT}/${profileId}`);
+    await remove(profileRef);
+};
+
 
 // --- Shopping List Functions ---
 
