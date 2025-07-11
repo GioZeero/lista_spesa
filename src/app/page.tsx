@@ -133,24 +133,23 @@ export default function Home() {
     setLoading(false);
   };
 
-  const totalCost = useMemo(() => shoppingList.reduce((total, item) => {
-    const validPrices = Object.entries(item.prices)
-      .filter(([, price]) => typeof price === 'number' && price > 0)
-      .map(([store, price]) => ({ store: store as Store, price: price! }));
-
-    if (validPrices.length === 0) return total;
-
-    const cheapest = validPrices.reduce((min, p) => (p.price < min.price ? p : min));
-    
-    const familaPrice = item.prices.famila;
-    let selectedStore = cheapest;
-
-    if (familaPrice !== undefined && familaPrice <= cheapest.price * 1.20) {
-      selectedStore = { store: 'famila', price: familaPrice };
-    }
-
-    return total + selectedStore.price * item.quantity;
-  }, 0).toFixed(2), [shoppingList]);
+  const totalCost = useMemo(() => {
+    return shoppingList.reduce((total, item) => {
+      const validPrices = Object.values(item.prices).filter(price => typeof price === 'number' && price > 0);
+  
+      if (validPrices.length === 0) return total;
+  
+      const cheapestPrice = Math.min(...validPrices as number[]);
+      const familaPrice = item.prices.famila;
+  
+      let selectedPrice = cheapestPrice;
+      if (familaPrice !== undefined && familaPrice <= cheapestPrice * 1.20) {
+        selectedPrice = familaPrice;
+      }
+  
+      return total + selectedPrice * item.quantity;
+    }, 0).toFixed(2);
+  }, [shoppingList]);
 
   const filteredAndSortedList = useMemo(() => {
     const freshnessOrder: Record<Freshness, number> = { red: 0, yellow: 1, green: 2 };
@@ -175,7 +174,6 @@ export default function Home() {
   }, [shoppingList, searchQuery, sortOrder]);
 
   if (!isClient) {
-    // Render nothing on the server to avoid hydration errors
     return null;
   }
   
