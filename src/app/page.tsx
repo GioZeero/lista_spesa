@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { ShoppingCart, NotebookPen, Utensils, Search, Loader2 } from "lucide-react";
-import type { ShoppingItem, DietPlan, Store, Freshness } from "@/types";
+import type { ShoppingItem, DietPlan, Store, Freshness, Profiles } from "@/types";
 import { DietSheet } from "@/components/diet-sheet";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ShoppingListItemCard } from "@/components/shopping-list-item";
@@ -15,9 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, deleteShoppingItem, batchUpdateShoppingList } from "@/lib/firebase";
+import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList } from "@/lib/firebase";
 import { ThemeProvider } from "@/components/theme-provider";
 
+
+const DEFAULT_PROFILE_ID = 'principale';
 
 export default function Home() {
   const [diet, setDiet] = useState<DietPlan | null>(null);
@@ -38,7 +40,7 @@ export default function Home() {
     setLoading(true);
     setFirebaseError(null);
     try {
-      const dietData = await getDietPlan();
+      const dietData = await getDietPlan(DEFAULT_PROFILE_ID);
       const shoppingListData = await getShoppingList();
       
       setDiet(dietData);
@@ -62,40 +64,48 @@ export default function Home() {
     }
   }, [isClient, fetchInitialData]);
 
-  const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
+  const updateShoppingList = useCallback(async (allProfiles: Profiles) => {
     const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
 
-    const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
-        if (dayTypeId) {
-            acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
-        }
-        return acc;
-    }, {} as Record<string, number>) : {};
+    Object.values(allProfiles).forEach(currentDiet => {
+        if (!currentDiet || !currentDiet.dayTypes) return;
 
-    currentDiet.dayTypes.forEach(dayType => {
-      dayType.items.forEach(item => {
-        if (!item.name) return;
-        const key = item.name.toLowerCase();
-        
-        const usageCount = dayTypeUsageCount[dayType.id] || 0;
-        let baseQuantity = item.quantity || 0;
+        const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
+            if (dayTypeId) {
+                acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<string, number>) : {};
 
-        if (usageCount > 0) {
-            baseQuantity *= usageCount;
-        }
-        
-        const quantityInGrams = (item.unit.toLowerCase() === 'g' ? baseQuantity : baseQuantity * 1000);
+        currentDiet.dayTypes.forEach(dayType => {
+            if (!dayType.items) return;
+            dayType.items.forEach(item => {
+                if (!item.name) return;
+                const key = item.name.toLowerCase();
+                
+                const usageCount = dayTypeUsageCount[dayType.id] || 0;
+                let baseQuantity = item.quantity || 0;
+                
+                let effectiveQuantity = baseQuantity;
+                if (usageCount > 0) {
+                    effectiveQuantity = baseQuantity * usageCount;
+                }
 
-        if (aggregatedItems[key]) {
-          aggregatedItems[key].quantity += quantityInGrams;
-        } else {
-          aggregatedItems[key] = {
-            quantity: quantityInGrams,
-            unit: 'g',
-            prices: item.prices || {},
-          };
-        }
-      });
+                if (effectiveQuantity > 0) {
+                    const quantityInGrams = (item.unit.toLowerCase() === 'g' ? effectiveQuantity : effectiveQuantity * 1000);
+
+                    if (aggregatedItems[key]) {
+                        aggregatedItems[key].quantity += quantityInGrams;
+                    } else {
+                        aggregatedItems[key] = {
+                            quantity: quantityInGrams,
+                            unit: 'g',
+                            prices: item.prices || {},
+                        };
+                    }
+                }
+            });
+        });
     });
 
     const existingList = await getShoppingList();
@@ -133,11 +143,18 @@ export default function Home() {
     await updateShoppingItem(updatedItem);
   };
 
-  const handleSaveDiet = async (newDiet: DietPlan) => {
+  const handleSaveDiet = async (profileId: string, newDiet: DietPlan) => {
     setLoading(true);
-    await updateDietPlan(newDiet);
-    setDiet(newDiet);
-    await updateShoppingList(newDiet);
+    await updateDietPlan(profileId, newDiet);
+    
+    // If the saved diet is the currently displayed one, update its state
+    if (profileId === DEFAULT_PROFILE_ID) {
+      setDiet(newDiet);
+    }
+    
+    const allProfiles = await getAllDietPlans();
+    await updateShoppingList(allProfiles);
+    
     setIsSheetOpen(false);
     setLoading(false);
   };
@@ -237,12 +254,12 @@ export default function Home() {
                 open={isSheetOpen}
                 onOpenChange={setIsSheetOpen}
                 onSave={handleSaveDiet}
-                initialDiet={diet}
+                initialProfileId={DEFAULT_PROFILE_ID}
               />}
               <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
                 <div>
-                  <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
-                  <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+                  <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Globale</h2>
+                  <p className="text-muted-foreground">Articoli da tutti i profili per una spesa efficiente.</p>
                 </div>
                 <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
                   <span>Costo Totale:</span>

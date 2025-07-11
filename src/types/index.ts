@@ -35,6 +35,12 @@ export type DietPlan = {
   week: WeekPlan;
 };
 
+// Rappresenta la collezione di tutti i piani dieta
+export type Profiles = {
+  [profileId: string]: DietPlan;
+};
+
+
 export type Freshness = 'green' | 'yellow' | 'red';
 
 // Rappresenta un articolo nella lista della spesa finale
@@ -47,5 +53,3 @@ export type ShoppingItem = {
   freshness: Freshness;
   isHighlighted: boolean;
 };
-
-    

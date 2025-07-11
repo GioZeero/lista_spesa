@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 import { getDatabase, ref, get, set, remove, update } from "firebase/database";
-import type { DietPlan, ShoppingItem } from "@/types";
+import type { DietPlan, Profiles, ShoppingItem } from "@/types";
 
 const firebaseConfig: FirebaseOptions = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -30,39 +30,53 @@ const getDb = () => {
     return getDatabase(app);
 }
 
-const DIET_PLAN_PATH = "dietPlans/main-diet-plan";
+const DIET_PLANS_ROOT = "dietPlans";
 
 // --- Diet Plan Functions ---
 
-export const getDietPlan = async (): Promise<DietPlan> => {
+export const getProfileIds = async (): Promise<string[]> => {
     const db = getDb();
-    const dietPlanRef = ref(db, DIET_PLAN_PATH);
+    const profilesRef = ref(db, DIET_PLANS_ROOT);
+    const snapshot = await get(profilesRef);
+    if (snapshot.exists()) {
+        return Object.keys(snapshot.val());
+    }
+    return [];
+};
+
+export const getDietPlan = async (profileId: string): Promise<DietPlan> => {
+    const db = getDb();
+    const dietPlanRef = ref(db, `${DIET_PLANS_ROOT}/${profileId}`);
     const snapshot = await get(dietPlanRef);
 
     if (snapshot.exists()) {
         return snapshot.val() as DietPlan;
     } else {
-        // Return a default empty structure if it doesn't exist
         const defaultPlan: DietPlan = {
             dayTypes: [],
             week: {
-                monday: null,
-                tuesday: null,
-                wednesday: null,
-                thursday: null,
-                friday: null,
-                saturday: null,
-                sunday: null,
+                monday: null, tuesday: null, wednesday: null, thursday: null, 
+                friday: null, saturday: null, sunday: null
             },
         };
-        await updateDietPlan(defaultPlan);
+        await updateDietPlan(profileId, defaultPlan);
         return defaultPlan;
     }
 };
 
-export const updateDietPlan = async (dietPlan: DietPlan): Promise<void> => {
+export const getAllDietPlans = async (): Promise<Profiles> => {
     const db = getDb();
-    const dietPlanRef = ref(db, DIET_PLAN_PATH);
+    const profilesRef = ref(db, DIET_PLANS_ROOT);
+    const snapshot = await get(profilesRef);
+    if (snapshot.exists()) {
+        return snapshot.val() as Profiles;
+    }
+    return {};
+}
+
+export const updateDietPlan = async (profileId: string, dietPlan: DietPlan): Promise<void> => {
+    const db = getDb();
+    const dietPlanRef = ref(db, `${DIET_PLANS_ROOT}/${profileId}`);
     await set(dietPlanRef, dietPlan);
 };
 
