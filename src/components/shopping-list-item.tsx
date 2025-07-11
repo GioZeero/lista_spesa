@@ -40,11 +40,20 @@ export function ShoppingListItemCard({
   onUpdate,
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices || {});
-  const [freshness, setFreshness] = useState<Freshness>(item.freshness);
+  const [freshness, setFreshness] = useState<Freshness>(item.freshness || 'green');
 
   const handlePriceChange = (store: Store, value: string) => {
-    const newPrice = value === "" ? undefined : parseFloat(value);
-    const newPrices = { ...prices, [store]: newPrice };
+    const newPrice = value === "" ? null : parseFloat(value);
+    if (newPrice !== null && isNaN(newPrice)) return;
+
+    const newPrices = { ...prices };
+
+    if (newPrice === null) {
+      delete newPrices[store];
+    } else {
+      newPrices[store] = newPrice;
+    }
+    
     setPrices(newPrices);
     onUpdate({ ...item, prices: newPrices });
   };
@@ -59,6 +68,7 @@ export function ShoppingListItemCard({
   };
 
   const autoSelectedStore = useMemo(() => {
+    if (!prices) return null;
     const validPrices = Object.entries(prices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
       .map(([store, price]) => ({ store: store as Store, price: price! }));
@@ -68,7 +78,7 @@ export function ShoppingListItemCard({
     const cheapest = validPrices.reduce((min, p) => (p.price < min.price ? p : min));
     
     const familaPrice = prices.famila;
-    if (familaPrice !== undefined && familaPrice <= cheapest.price * 1.20) {
+    if (familaPrice !== undefined && familaPrice !== null && familaPrice <= cheapest.price * 1.20) {
       return { store: 'famila' as Store, price: familaPrice };
     }
 
@@ -95,7 +105,7 @@ export function ShoppingListItemCard({
              <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
-                        <span className={cn("h-3 w-3 rounded-full flex-shrink-0", freshnessConfig[freshness].color)}></span>
+                        <span className={cn("h-3 w-3 rounded-full flex-shrink-0", freshnessConfig[freshness]?.color)}></span>
                         <h3 className="text-xl font-bold">{item.name}</h3>
                     </div>
                   <p className="font-medium text-primary pl-6">
