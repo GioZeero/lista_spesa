@@ -1,12 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ShoppingCart, NotebookPen, Utensils } from "lucide-react";
-import type { ShoppingItem, DietPlan, Store } from "@/types";
+import { useState, useEffect, useMemo } from "react";
+import { ShoppingCart, NotebookPen, Utensils, Search } from "lucide-react";
+import type { ShoppingItem, DietPlan, Store, Freshness } from "@/types";
 import { DietSheet } from "@/components/diet-sheet";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ShoppingListItemCard } from "@/components/shopping-list-item";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 
 const initialDiet: DietPlan = {
   dayTypes: [
@@ -55,6 +64,8 @@ export default function Home() {
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState("default");
 
   useEffect(() => {
     setIsClient(true);
@@ -74,6 +85,7 @@ export default function Home() {
       const dayType = currentDiet.dayTypes.find(d => d.id === dayTypeId);
       if (dayType) {
         dayType.items.forEach(item => {
+          if (!item.name || item.quantity <= 0) return;
           const quantityInGrams = item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000;
           
           if (aggregatedItems[item.name]) {
@@ -117,7 +129,7 @@ export default function Home() {
     setIsSheetOpen(false);
   };
 
-  const totalCost = shoppingList.reduce((total, item) => {
+  const totalCost = useMemo(() => shoppingList.reduce((total, item) => {
     const validPrices = Object.entries(item.prices)
       .filter(([, price]) => typeof price === 'number' && price > 0)
       .map(([store, price]) => ({ store: store as Store, price: price! }));
@@ -134,7 +146,28 @@ export default function Home() {
     }
 
     return total + selectedStore.price * item.quantity;
-  }, 0).toFixed(2);
+  }, 0).toFixed(2), [shoppingList]);
+
+  const filteredAndSortedList = useMemo(() => {
+    const freshnessOrder: Record<Freshness, number> = { red: 0, yellow: 1, green: 2 };
+
+    return shoppingList
+      .filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .sort((a, b) => {
+        switch (sortOrder) {
+          case 'alphabetical':
+            return a.name.localeCompare(b.name);
+          case 'freshness':
+            return freshnessOrder[a.freshness] - freshnessOrder[b.freshness];
+          case 'highlighted':
+            return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
+          default:
+            return 0;
+        }
+      });
+  }, [shoppingList, searchQuery, sortOrder]);
 
 
   return (
@@ -166,21 +199,48 @@ export default function Home() {
 
       <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
         {isClient && (
+          <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
+              <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
+            </div>
+            <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+              <span>Costo Totale:</span>
+              <span>€{totalCost}</span>
+            </div>
+          </div>
+        )}
+        
+        {isClient && (
           <>
-            <div className="mb-8 flex flex-col items-start justify-between gap-4 rounded-xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Settimanale</h2>
-                <p className="text-muted-foreground">Articoli aggregati dalla tua dieta per una spesa efficiente.</p>
-              </div>
-              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-                <span>Costo Totale:</span>
-                <span>€{totalCost}</span>
-              </div>
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+               <div className="relative lg:col-span-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca alimento..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+               </div>
+               <div className="lg:col-span-2">
+                 <Select value={sortOrder} onValueChange={setSortOrder}>
+                   <SelectTrigger className="w-full">
+                     <SelectValue placeholder="Ordina per..." />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="default">Ordine predefinito</SelectItem>
+                     <SelectItem value="alphabetical">Alfabetico (A-Z)</SelectItem>
+                     <SelectItem value="freshness">Livello di scadenza</SelectItem>
+                     <SelectItem value="highlighted">Da comprare</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
             </div>
 
-            {shoppingList.length > 0 ? (
+            {filteredAndSortedList.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {shoppingList.map((item) => (
+                {filteredAndSortedList.map((item) => (
                   <ShoppingListItemCard
                     key={item.id}
                     item={item}
@@ -191,8 +251,8 @@ export default function Home() {
             ) : (
               <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
                 <Utensils className="h-16 w-16 text-muted-foreground/50" />
-                <h3 className="text-xl font-semibold">La tua dieta è vuota</h3>
-                <p className="max-w-xs">Clicca "Gestisci Dieta" per iniziare a compilare il tuo piano settimanale.</p>
+                <h3 className="text-xl font-semibold">Nessun risultato</h3>
+                <p className="max-w-xs">Prova a modificare la ricerca o i filtri. Se la lista è vuota, clicca "Gestisci Dieta" per iniziare.</p>
               </div>
             )}
           </>
