@@ -1,10 +1,14 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'ShopSmart',
   description: 'Un\'app intelligente per la lista della spesa con confronto dei prezzi.',
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -20,7 +24,14 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-          {children}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
           <Toaster />
       </body>
     </html>
