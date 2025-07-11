@@ -64,21 +64,23 @@ export default function Home() {
   const updateShoppingList = useCallback(async (currentDiet: DietPlan) => {
     const aggregatedItems: { [key: string]: { quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
 
-    const dayTypeUsageCount = Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
+    const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
         if (dayTypeId) {
             acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
         }
         return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, number>) : {};
 
     currentDiet.dayTypes.forEach(dayType => {
       dayType.items.forEach(item => {
         if (!item.name) return;
         const key = item.name.toLowerCase();
-        const usageCount = dayTypeUsageCount[dayType.id] || 0;
-
-        const quantityInGrams = (item.unit.toLowerCase() === 'g' ? item.quantity : item.quantity * 1000) * usageCount;
         
+        const usageCount = dayTypeUsageCount[dayType.id] || 0;
+        const baseQuantity = item.quantity || 0;
+        
+        const quantityInGrams = (item.unit.toLowerCase() === 'g' ? baseQuantity : baseQuantity * 1000) * (usageCount > 0 ? usageCount : 1);
+
         if (aggregatedItems[key]) {
           aggregatedItems[key].quantity += quantityInGrams;
         } else {
