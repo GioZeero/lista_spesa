@@ -105,7 +105,7 @@ export default function Home() {
           name: name.charAt(0).toUpperCase() + name.slice(1),
           quantity: parseFloat(finalQuantity.toFixed(2)),
           unit: finalUnit,
-          prices: existingItem?.prices || data.prices,
+          prices: existingItem?.prices || data.prices || {},
           freshness: existingItem?.freshness || 'green',
           isHighlighted: existingItem?.isHighlighted || false,
         };
@@ -137,12 +137,12 @@ export default function Home() {
 
   const totalCost = useMemo(() => {
     return shoppingList.reduce((total, item) => {
-      const prices = Object.values(item.prices).filter((price): price is number => typeof price === 'number' && price > 0);
+      const prices = Object.values(item.prices || {}).filter((price): price is number => typeof price === 'number' && price > 0);
   
       if (prices.length === 0) return total;
   
       const cheapestPrice = Math.min(...prices);
-      const familaPrice = item.prices.famila;
+      const familaPrice = item.prices?.famila;
   
       let selectedPrice = cheapestPrice;
       if (familaPrice !== undefined && familaPrice <= cheapestPrice * 1.20) {
