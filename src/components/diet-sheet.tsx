@@ -224,7 +224,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 pr-4 -mr-6">
-          <Accordion type="multiple" defaultValue={['profiles', 'week-plan']} className="w-full space-y-6 py-4">
+          <Accordion type="multiple" className="w-full space-y-6 py-4">
 
             {/* Profile Management */}
              <AccordionItem value="profiles">
