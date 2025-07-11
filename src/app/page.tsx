@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList, deleteProfile } from "@/lib/firebase";
-import { ThemeProvider } from '@/components/theme-provider';
 
 
 const DEFAULT_PROFILE_ID = 'principale';
@@ -69,64 +68,65 @@ export default function Home() {
     const aggregatedItems: { [key: string]: { name: string; quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
   
     Object.values(allProfiles).forEach(currentDiet => {
-        if (!currentDiet || !currentDiet.dayTypes) return;
-
-        const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
-            if (dayTypeId) {
-                acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
-            }
-            return acc;
-        }, {} as Record<string, number>) : {};
-
-        currentDiet.dayTypes.forEach(dayType => {
-            if (!dayType.items) return;
-
-            dayType.items.forEach(item => {
-                if (!item.name) return;
-                const key = item.name.toLowerCase();
-                const usageCount = dayTypeUsageCount[dayType.id] || 0;
-                const baseQuantity = item.quantity || 0;
-                
-                let effectiveQuantity = 0;
-                if (usageCount > 0) {
-                    effectiveQuantity = baseQuantity * usageCount;
-                } else {
-                    effectiveQuantity = baseQuantity;
-                }
-
-                if (aggregatedItems[key]) {
-                    aggregatedItems[key].quantity += effectiveQuantity;
-                } else {
-                    aggregatedItems[key] = {
-                        name: item.name,
-                        quantity: effectiveQuantity,
-                        unit: item.unit || 'g',
-                        prices: item.prices || {},
-                    };
-                }
-            });
+      if (!currentDiet || !currentDiet.dayTypes) return;
+  
+      const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
+        if (dayTypeId) {
+          acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>) : {};
+  
+      currentDiet.dayTypes.forEach(dayType => {
+        if (!dayType.items) return;
+  
+        dayType.items.forEach(item => {
+          if (!item.name) return;
+          const key = item.name.toLowerCase();
+          const usageCount = dayTypeUsageCount[dayType.id] || 0;
+          const baseQuantity = item.quantity || 0;
+          
+          let effectiveQuantity = 0;
+          if (usageCount > 0) {
+            effectiveQuantity = baseQuantity * usageCount;
+          } else {
+            // Keep the base quantity if the day type is not used in the week
+            effectiveQuantity = baseQuantity;
+          }
+  
+          if (aggregatedItems[key]) {
+            aggregatedItems[key].quantity += effectiveQuantity;
+          } else {
+            aggregatedItems[key] = {
+              name: item.name,
+              quantity: effectiveQuantity,
+              unit: item.unit || 'g',
+              prices: item.prices || {},
+            };
+          }
         });
+      });
     });
   
     const existingList = await getShoppingList();
     const newList: ShoppingItem[] = [];
-
+  
     for (const data of Object.values(aggregatedItems)) {
-        const finalQuantity = data.quantity >= 1000 ? data.quantity / 1000 : data.quantity;
-        const finalUnit = data.quantity >= 1000 ? 'kg' : 'g';
-        const sanitizedId = data.name.replace(/[.#$[\]]/g, '_').toLowerCase();
-        const existingItem = existingList.find(i => i.id === sanitizedId);
-        
-        const newItem: ShoppingItem = {
-          id: sanitizedId,
-          name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
-          quantity: parseFloat(finalQuantity.toFixed(2)),
-          unit: finalUnit,
-          prices: existingItem?.prices || data.prices || {},
-          freshness: existingItem?.freshness || 'green',
-          isHighlighted: existingItem?.isHighlighted || false,
-        };
-        newList.push(newItem);
+      const finalQuantity = data.quantity >= 1000 ? data.quantity / 1000 : data.quantity;
+      const finalUnit = data.quantity >= 1000 ? 'kg' : 'g';
+      const sanitizedId = data.name.replace(/[.#$[\]]/g, '_').toLowerCase();
+      const existingItem = existingList.find(i => i.id === sanitizedId);
+      
+      const newItem: ShoppingItem = {
+        id: sanitizedId,
+        name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
+        quantity: parseFloat(finalQuantity.toFixed(2)),
+        unit: finalUnit,
+        prices: existingItem?.prices || data.prices || {},
+        freshness: existingItem?.freshness || 'green',
+        isHighlighted: existingItem?.isHighlighted || false,
+      };
+      newList.push(newItem);
     }
     
     await batchUpdateShoppingList(newList);
@@ -168,16 +168,16 @@ export default function Home() {
 
   const totalCost = useMemo(() => {
     return shoppingList.reduce((total, item) => {
-      const prices = item.prices || {};
-      const validPrices = Object.values(prices).filter((p): p is number => typeof p === 'number' && p > 0);
-
+      const itemPrices = item.prices || {};
+      const validPrices = Object.values(itemPrices).filter((p): p is number => typeof p === 'number' && p > 0);
+  
       if (validPrices.length === 0) {
         return total;
       }
-
+  
       const cheapestPrice = Math.min(...validPrices);
-      const familaPrice = prices.famila;
-
+      const familaPrice = itemPrices.famila;
+  
       let selectedPrice = cheapestPrice;
       if (familaPrice !== undefined && familaPrice !== null && familaPrice <= cheapestPrice * 1.20) {
         selectedPrice = familaPrice;
@@ -221,12 +221,6 @@ export default function Home() {
   }
 
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -330,6 +324,7 @@ export default function Home() {
             {year && <span>© {year} ShopSmart. Tutti i diritti riservati.</span>}
         </footer>
       </div>
-    </ThemeProvider>
   );
 }
+
+    
