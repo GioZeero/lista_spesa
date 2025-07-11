@@ -175,7 +175,8 @@ export default function Home() {
         selectedPrice = familaPrice;
       }
       
-      return total + (selectedPrice * item.quantity);
+      const quantityInKg = item.unit === 'g' ? item.quantity / 1000 : item.quantity;
+      return total + (selectedPrice * quantityInKg);
     }, 0).toFixed(2);
   }, [shoppingList]);
   

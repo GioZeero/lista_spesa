@@ -52,7 +52,7 @@ export function ShoppingListItemCard({
     if (newPrice === null) {
       delete newPrices[store];
     } else {
-      newPrices[store] = newPrice;
+      newPrices[store as keyof typeof prices] = newPrice;
     }
     
     setPrices(newPrices);
@@ -90,7 +90,8 @@ export function ShoppingListItemCard({
   
   const getPriceForFooter = () => {
     if (autoSelectedStore) {
-      return `€${(autoSelectedStore.price * item.quantity).toFixed(2)}`;
+      const quantityInKg = item.unit === 'g' ? item.quantity / 1000 : item.quantity;
+      return `€${(autoSelectedStore.price * quantityInKg).toFixed(2)}`;
     }
     return "N/A";
   }
