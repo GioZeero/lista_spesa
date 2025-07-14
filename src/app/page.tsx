@@ -52,9 +52,6 @@ export default function Home() {
         }
         
         currentDiet.dayTypes.forEach(dayType => {
-            // Se un dayType non è usato nella settimana, lo contiamo una volta.
-            // Se è usato, viene già contato da dayTypeUsageCount.
-            // Se non è usato e non vogliamo includerlo, si può commentare questa linea.
             const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
             if (usageMultiplier === 0) return;
 
@@ -97,7 +94,7 @@ export default function Home() {
         const finalQuantity = useKg ? data.quantityInGrams / 1000 : data.quantityInGrams;
         const finalUnit = useKg ? 'kg' : 'g';
 
-        const sanitizedId = data.name.trim().toLowerCase().replace(/[.#$[\]]/g, '_');
+        const sanitizedId = data.name.trim().toLowerCase().replace(/[.#$[\]/]/g, '_');
         const existingItem = existingList.find(i => i.id === sanitizedId);
         
         const newItem: ShoppingItem = {
@@ -164,16 +161,16 @@ export default function Home() {
   const handleSaveDiet = async (profileId: string, newDiet: DietPlan) => {
     setLoading(true);
     await updateDietPlan(profileId, newDiet);
-    setActiveProfileId(profileId);
     
     const updatedProfiles = {
-      ...profiles,
-      [profileId]: newDiet,
+        ...profiles,
+        [profileId]: newDiet,
     };
     setProfiles(updatedProfiles as Profiles);
     
     await updateShoppingList(updatedProfiles as Profiles);
     
+    setActiveProfileId(profileId);
     setIsSheetOpen(false);
     setLoading(false);
   };

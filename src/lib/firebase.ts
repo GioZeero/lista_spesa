@@ -147,7 +147,7 @@ export const updateShoppingItem = async (item: ShoppingItem): Promise<void> => {
 
 export const deleteShoppingItem = async (itemId: string): Promise<void> => {
     const db = getDb();
-    const sanitizedId = itemId.replace(/[.#$[\]]/g, '_').toLowerCase();
+    const sanitizedId = itemId.replace(/[.#$[\]/]/g, '_').toLowerCase();
     const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${sanitizedId}`);
     await remove(itemRef);
 }
