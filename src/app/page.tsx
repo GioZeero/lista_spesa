@@ -78,8 +78,6 @@ export default function Home() {
         return acc;
       }, {} as Record<string, number>) : {};
       
-      const usedDayTypeIds = new Set(Object.keys(dayTypeUsageCount));
-
       currentDiet.dayTypes.forEach(dayType => {
         const meals = [
           ...(dayType.breakfast || []), 
@@ -89,15 +87,16 @@ export default function Home() {
         if (meals.length === 0) return;
 
         const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
-        const isDayTypeUsed = usageMultiplier > 0;
-        
         // If a daytype is not used in the week, we still count it once
-        const effectiveMultiplier = isDayTypeUsed ? usageMultiplier : 1;
+        const effectiveMultiplier = usageMultiplier > 0 ? usageMultiplier : 1;
 
         meals.forEach(item => {
           if (!item.name || item.quantity <= 0) return;
           
-          const key = item.name.toLowerCase();
+          const trimmedName = item.name.trim();
+          const key = trimmedName.toLowerCase();
+          if (!key) return;
+
           const baseQuantity = item.quantity || 0;
           const quantityInGrams = item.unit === 'kg' ? baseQuantity * 1000 : baseQuantity;
           
@@ -107,7 +106,7 @@ export default function Home() {
             aggregatedItems[key].quantityInGrams += effectiveQuantity;
           } else {
             aggregatedItems[key] = {
-              name: item.name,
+              name: trimmedName,
               quantityInGrams: effectiveQuantity,
               prices: item.prices || {},
             };
