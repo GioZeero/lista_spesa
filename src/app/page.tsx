@@ -204,7 +204,7 @@ export default function Home() {
 
     return [...shoppingList]
       .filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        item.name && item.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) => {
         if (sortOrder === 'default') {
