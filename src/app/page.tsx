@@ -77,6 +77,8 @@ export default function Home() {
         }
         return acc;
       }, {} as Record<string, number>) : {};
+      
+      const usedDayTypeIds = new Set(Object.keys(dayTypeUsageCount));
 
       currentDiet.dayTypes.forEach(dayType => {
         const meals = [
@@ -88,6 +90,9 @@ export default function Home() {
 
         const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
         const isDayTypeUsed = usageMultiplier > 0;
+        
+        // If a daytype is not used in the week, we still count it once
+        const effectiveMultiplier = isDayTypeUsed ? usageMultiplier : 1;
 
         meals.forEach(item => {
           if (!item.name || item.quantity <= 0) return;
@@ -96,7 +101,7 @@ export default function Home() {
           const baseQuantity = item.quantity || 0;
           const quantityInGrams = item.unit === 'kg' ? baseQuantity * 1000 : baseQuantity;
           
-          const effectiveQuantity = isDayTypeUsed ? (quantityInGrams * usageMultiplier) : quantityInGrams;
+          const effectiveQuantity = quantityInGrams * effectiveMultiplier;
 
           if (aggregatedItems[key]) {
             aggregatedItems[key].quantityInGrams += effectiveQuantity;
