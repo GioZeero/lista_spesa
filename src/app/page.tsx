@@ -87,15 +87,15 @@ export default function Home() {
         if (meals.length === 0) return;
 
         const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
-        // If a daytype is not used in the week, we still count it once
         const effectiveMultiplier = usageMultiplier > 0 ? usageMultiplier : 1;
 
         meals.forEach(item => {
           if (!item.name || item.quantity <= 0) return;
           
-          const trimmedName = item.name.trim();
-          const key = trimmedName.toLowerCase();
-          if (!key) return;
+          const cleanedName = item.name.trim();
+          if (!cleanedName) return;
+          
+          const key = cleanedName.toLowerCase();
 
           const baseQuantity = item.quantity || 0;
           const quantityInGrams = item.unit === 'kg' ? baseQuantity * 1000 : baseQuantity;
@@ -106,7 +106,7 @@ export default function Home() {
             aggregatedItems[key].quantityInGrams += effectiveQuantity;
           } else {
             aggregatedItems[key] = {
-              name: trimmedName,
+              name: cleanedName, // Use the first-encountered cleaned name
               quantityInGrams: effectiveQuantity,
               prices: item.prices || {},
             };
@@ -125,7 +125,7 @@ export default function Home() {
       const finalQuantity = useKg ? data.quantityInGrams / 1000 : data.quantityInGrams;
       const finalUnit = useKg ? 'kg' : 'g';
 
-      const sanitizedId = data.name.replace(/[.#$[\]]/g, '_').toLowerCase();
+      const sanitizedId = data.name.trim().toLowerCase().replace(/[.#$[\]]/g, '_');
       const existingItem = existingList.find(i => i.id === sanitizedId);
       
       const newItem: ShoppingItem = {
@@ -207,18 +207,19 @@ export default function Home() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
       .sort((a, b) => {
-        switch (sortOrder) {
-          case 'alphabetical':
-            return a.name.localeCompare(b.name);
-          case 'freshness':
-            return freshnessOrder[a.freshness] - freshnessOrder[b.freshness];
-          case 'default':
-          default:
+        if (sortOrder === 'default') {
             if (a.isHighlighted !== b.isHighlighted) {
               return (b.isHighlighted ? 1 : 0) - (a.isHighlighted ? 1 : 0);
             }
             return a.name.localeCompare(b.name);
         }
+        if (sortOrder === 'alphabetical') {
+            return a.name.localeCompare(b.name);
+        }
+        if (sortOrder === 'freshness') {
+            return freshnessOrder[a.freshness] - freshnessOrder[b.freshness];
+        }
+        return 0;
       });
   }, [shoppingList, searchQuery, sortOrder]);
   
@@ -348,3 +349,5 @@ export default function Home() {
     </ThemeProvider>
   );
 }
+
+    
