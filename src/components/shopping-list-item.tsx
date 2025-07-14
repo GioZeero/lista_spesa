@@ -31,7 +31,7 @@ interface ShoppingListItemProps {
 }
 
 const freshnessConfig: Record<Freshness, { color: string; label: string }> = {
-  green: { color: 'bg-blue-500', label: 'Fresco (> 6 giorni)' },
+  blue: { color: 'bg-blue-500', label: 'Fresco (> 6 giorni)' },
   yellow: { color: 'bg-yellow-500', label: 'In scadenza (3-6 giorni)' },
   red: { color: 'bg-red-500', label: 'Urgente (< 3 giorni)' },
 };
@@ -41,7 +41,7 @@ export function ShoppingListItemCard({
   onUpdate,
 }: ShoppingListItemProps) {
   const [prices, setPrices] = useState(item.prices || {});
-  const [freshness, setFreshness] = useState<Freshness>(item.freshness || 'green');
+  const [freshness, setFreshness] = useState<Freshness>(item.freshness || 'blue');
 
   const handlePriceChange = (store: Store, value: string) => {
     const newPrice = value === "" ? null : parseFloat(value);
@@ -168,7 +168,7 @@ export function ShoppingListItemCard({
                 <div>
                    <p className="text-xs text-muted-foreground mb-2">Imposta la freschezza del prodotto.</p>
                    <div className="flex flex-col gap-2">
-                      {(['green', 'yellow', 'red'] as Freshness[]).map((level) => (
+                      {(['blue', 'yellow', 'red'] as Freshness[]).map((level) => (
                          <Button
                             key={level}
                             variant={freshness === level ? 'default' : 'outline'}

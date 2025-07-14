@@ -46,7 +46,7 @@ export type Profiles = {
 };
 
 
-export type Freshness = 'green' | 'yellow' | 'red';
+export type Freshness = 'blue' | 'yellow' | 'red';
 
 // Rappresenta un articolo nella lista della spesa finale
 export type ShoppingItem = {

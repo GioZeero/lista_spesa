@@ -103,7 +103,7 @@ export default function Home() {
             quantity: parseFloat(finalQuantity.toFixed(2)),
             unit: finalUnit,
             prices: existingItem?.prices || data.prices || {},
-            freshness: existingItem?.freshness || 'green',
+            freshness: existingItem?.freshness || 'blue',
             isHighlighted: existingItem?.isHighlighted || false,
         };
         newList.push(newItem);
@@ -214,7 +214,7 @@ export default function Home() {
   }, [shoppingList]);
   
   const filteredAndSortedList = useMemo(() => {
-    const freshnessOrder: Record<Freshness, number> = { red: 0, yellow: 1, green: 2 };
+    const freshnessOrder: Record<Freshness, number> = { red: 0, yellow: 1, blue: 2 };
 
     return [...shoppingList]
       .filter(item =>
