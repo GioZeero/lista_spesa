@@ -33,6 +33,11 @@ const getDb = () => {
 
 const DIET_PLANS_ROOT = "dietPlans";
 
+const defaultWeek = {
+    monday: null, tuesday: null, wednesday: null, thursday: null,
+    friday: null, saturday: null, sunday: null
+};
+
 // --- Diet Plan Functions ---
 
 export const getProfileIds = async (): Promise<string[]> => {
@@ -52,24 +57,28 @@ export const getDietPlan = async (profileId: string): Promise<DietPlan> => {
 
     if (snapshot.exists()) {
         const plan = snapshot.val() as DietPlan;
-        // Ensure meal arrays exist to prevent runtime errors
-        if (plan.dayTypes) {
-            plan.dayTypes.forEach(dt => {
-                dt.breakfast = dt.breakfast || [];
-                dt.lunch = dt.lunch || [];
-                dt.dinner = dt.dinner || [];
-            });
-        }
-        return plan;
+        
+        // Ensure plan structure is complete to avoid runtime errors
+        const validatedPlan: DietPlan = {
+            dayTypes: plan.dayTypes || [],
+            week: plan.week || { ...defaultWeek },
+        };
+
+        // Ensure meal arrays exist inside dayTypes
+        validatedPlan.dayTypes.forEach(dt => {
+            dt.breakfast = dt.breakfast || [];
+            dt.lunch = dt.lunch || [];
+            dt.dinner = dt.dinner || [];
+        });
+
+        return validatedPlan;
     } else {
+        // For a new profile, create a default plan structure
         const defaultPlan: DietPlan = {
             dayTypes: [],
-            week: {
-                monday: null, tuesday: null, wednesday: null, thursday: null, 
-                friday: null, saturday: null, sunday: null
-            },
+            week: { ...defaultWeek },
         };
-        await updateDietPlan(profileId, defaultPlan);
+        // No need to save it here, it will be saved when the user clicks "Save Diet"
         return defaultPlan;
     }
 };

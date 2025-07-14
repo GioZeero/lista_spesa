@@ -85,6 +85,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, profile
 
   const fetchDiet = useCallback(async (id: string) => {
     setLoading(true);
+    setDiet(null);
     const dietData = await getDietPlan(id);
     setDiet(dietData);
     setLoading(false);
@@ -93,9 +94,14 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, profile
   useEffect(() => {
     if (open) {
       fetchProfiles();
+    }
+  }, [open, fetchProfiles]);
+
+  useEffect(() => {
+    if (open && profileId) {
       fetchDiet(profileId);
     }
-  }, [open, profileId, fetchDiet, fetchProfiles]);
+  }, [open, profileId, fetchDiet]);
 
   const handleProfileChange = (newProfileId: string) => {
     if (newProfileId) {
@@ -104,23 +110,37 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, profile
   };
 
   const handleCreateProfile = () => {
-    if (newProfileName.trim() && !profileIds.includes(newProfileName.trim())) {
-      const newId = newProfileName.trim();
-      setProfileIds(prev => [...prev, newId]);
-      onProfileChange(newId);
-      setNewProfileName("");
+    const newId = newProfileName.trim();
+    if (newId && !profileIds.includes(newId)) {
+        setProfileIds(prev => [...prev, newId]);
+        onProfileChange(newId);
+        
+        // Create a new blank diet plan for the new profile
+        const newDiet: DietPlan = {
+            dayTypes: [],
+            week: {
+                monday: null, tuesday: null, wednesday: null, thursday: null,
+                friday: null, saturday: null, sunday: null,
+            },
+        };
+        setDiet(newDiet);
+        
+        setNewProfileName("");
     }
   };
 
   const handleDeleteConfirmed = async () => {
     if (profileId === 'principale') return;
     
-    await onDeleteProfile(profileId);
+    const idToDelete = profileId;
     
-    const newProfileIds = profileIds.filter(id => id !== profileId);
-    setProfileIds(newProfileIds);
     // Switch back to the default profile
     onProfileChange('principale');
+    
+    await onDeleteProfile(idToDelete);
+    
+    const newProfileIds = profileIds.filter(id => id !== idToDelete);
+    setProfileIds(newProfileIds);
   }
 
 
