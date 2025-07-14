@@ -68,52 +68,53 @@ export default function Home() {
   const updateShoppingList = useCallback(async (allProfiles: Profiles) => {
     const aggregatedItems: { [key: string]: { name: string; quantityInGrams: number; prices: Partial<Record<Store, number>> } } = {};
 
-    Object.values(allProfiles).forEach(currentDiet => {
-      if (!currentDiet || !currentDiet.dayTypes) return;
+    // Iterate over all profiles to aggregate food items
+    for (const profileId in allProfiles) {
+      const currentDiet = allProfiles[profileId];
+      if (!currentDiet || !currentDiet.dayTypes || !currentDiet.week) continue;
 
-      const dayTypeUsageCount = currentDiet.week ? Object.values(currentDiet.week).reduce((acc, dayTypeId) => {
-        if (dayTypeId) {
-          acc[dayTypeId] = (acc[dayTypeId] || 0) + 1;
+      // Create a map of dayTypeId to its usage count in the week
+      const dayTypeUsageCount: Record<string, number> = {};
+      for (const day of Object.values(currentDiet.week)) {
+        if (day) {
+          dayTypeUsageCount[day] = (dayTypeUsageCount[day] || 0) + 1;
         }
-        return acc;
-      }, {} as Record<string, number>) : {};
+      }
       
+      // Iterate over all day types defined in the diet
       currentDiet.dayTypes.forEach(dayType => {
+        // Only process day types that are actually used in the week
+        const usageMultiplier = dayTypeUsageCount[dayType.id];
+        if (!usageMultiplier || usageMultiplier === 0) return;
+        
         const meals = [
-          ...(dayType.breakfast || []), 
-          ...(dayType.lunch || []), 
+          ...(dayType.breakfast || []),
+          ...(dayType.lunch || []),
           ...(dayType.dinner || [])
         ];
-        if (meals.length === 0) return;
-
-        const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
-        const effectiveMultiplier = usageMultiplier > 0 ? usageMultiplier : 1;
 
         meals.forEach(item => {
-          if (!item.name || item.quantity <= 0) return;
-          
+          if (!item.name || !item.quantity) return;
+
           const cleanedName = item.name.trim();
           if (!cleanedName) return;
-          
-          const key = cleanedName.toLowerCase();
 
-          const baseQuantity = item.quantity || 0;
-          const quantityInGrams = item.unit === 'kg' ? baseQuantity * 1000 : baseQuantity;
-          
-          const effectiveQuantity = quantityInGrams * effectiveMultiplier;
+          const key = cleanedName.toLowerCase();
+          const quantityInGrams = item.unit === 'kg' ? item.quantity * 1000 : item.quantity;
+          const totalQuantity = quantityInGrams * usageMultiplier;
 
           if (aggregatedItems[key]) {
-            aggregatedItems[key].quantityInGrams += effectiveQuantity;
+            aggregatedItems[key].quantityInGrams += totalQuantity;
           } else {
             aggregatedItems[key] = {
-              name: cleanedName, // Use the first-encountered cleaned name
-              quantityInGrams: effectiveQuantity,
+              name: cleanedName, // Use the cleaned name
+              quantityInGrams: totalQuantity,
               prices: item.prices || {},
             };
           }
         });
       });
-    });
+    }
 
     const existingList = await getShoppingList();
     const newList: ShoppingItem[] = [];
@@ -125,11 +126,13 @@ export default function Home() {
       const finalQuantity = useKg ? data.quantityInGrams / 1000 : data.quantityInGrams;
       const finalUnit = useKg ? 'kg' : 'g';
 
+      // Use the normalized name to create the ID
       const sanitizedId = data.name.trim().toLowerCase().replace(/[.#$[\]]/g, '_');
       const existingItem = existingList.find(i => i.id === sanitizedId);
       
       const newItem: ShoppingItem = {
         id: sanitizedId,
+        // Capitalize the first letter for display
         name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
         quantity: parseFloat(finalQuantity.toFixed(2)),
         unit: finalUnit,
