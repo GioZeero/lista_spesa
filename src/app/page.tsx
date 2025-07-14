@@ -31,6 +31,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [activeProfileId, setActiveProfileId] = useState(DEFAULT_PROFILE_ID);
 
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Home() {
     setLoading(true);
     setFirebaseError(null);
     try {
-      const dietData = await getDietPlan(DEFAULT_PROFILE_ID);
+      const dietData = await getDietPlan(activeProfileId);
       const shoppingListData = await getShoppingList();
       
       setDiet(dietData);
@@ -57,7 +58,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeProfileId]);
 
   useEffect(() => {
     if (isClient) {
@@ -68,84 +69,78 @@ export default function Home() {
   const updateShoppingList = useCallback(async (allProfiles: Profiles) => {
     const aggregatedItems: { [key: string]: { name: string; quantityInGrams: number; prices: Partial<Record<Store, number>> } } = {};
 
-    // Iterate over all profiles to aggregate food items
     for (const profileId in allProfiles) {
-      const currentDiet = allProfiles[profileId];
-      if (!currentDiet || !currentDiet.dayTypes || !currentDiet.week) continue;
+        const currentDiet = allProfiles[profileId];
+        if (!currentDiet || !currentDiet.dayTypes || !currentDiet.week) continue;
 
-      // Create a map of dayTypeId to its usage count in the week
-      const dayTypeUsageCount: Record<string, number> = {};
-      for (const day of Object.values(currentDiet.week)) {
-        if (day) {
-          dayTypeUsageCount[day] = (dayTypeUsageCount[day] || 0) + 1;
+        const dayTypeUsageCount: Record<string, number> = {};
+        for (const day of Object.values(currentDiet.week)) {
+            if (day) {
+                dayTypeUsageCount[day] = (dayTypeUsageCount[day] || 0) + 1;
+            }
         }
-      }
-      
-      // Iterate over all day types defined in the diet
-      currentDiet.dayTypes.forEach(dayType => {
-        // Only process day types that are actually used in the week
-        const usageMultiplier = dayTypeUsageCount[dayType.id];
-        if (!usageMultiplier || usageMultiplier === 0) return;
         
-        const meals = [
-          ...(dayType.breakfast || []),
-          ...(dayType.lunch || []),
-          ...(dayType.dinner || [])
-        ];
+        currentDiet.dayTypes.forEach(dayType => {
+            const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
+            if (usageMultiplier === 0) return;
 
-        meals.forEach(item => {
-          if (!item.name || !item.quantity) return;
+            const meals = [
+                ...(dayType.breakfast || []),
+                ...(dayType.lunch || []),
+                ...(dayType.dinner || [])
+            ];
 
-          const cleanedName = item.name.trim();
-          if (!cleanedName) return;
+            meals.forEach(item => {
+                if (!item.name || !item.quantity) return;
 
-          const key = cleanedName.toLowerCase();
-          const quantityInGrams = item.unit === 'kg' ? item.quantity * 1000 : item.quantity;
-          const totalQuantity = quantityInGrams * usageMultiplier;
+                const cleanedName = item.name.trim();
+                if (!cleanedName) return;
 
-          if (aggregatedItems[key]) {
-            aggregatedItems[key].quantityInGrams += totalQuantity;
-          } else {
-            aggregatedItems[key] = {
-              name: cleanedName, // Use the cleaned name
-              quantityInGrams: totalQuantity,
-              prices: item.prices || {},
-            };
-          }
+                const key = cleanedName.toLowerCase();
+                const quantityInGrams = item.unit === 'kg' ? item.quantity * 1000 : item.quantity;
+                const totalQuantity = quantityInGrams * usageMultiplier;
+
+                if (aggregatedItems[key]) {
+                    aggregatedItems[key].quantityInGrams += totalQuantity;
+                } else {
+                    aggregatedItems[key] = {
+                        name: cleanedName,
+                        quantityInGrams: totalQuantity,
+                        prices: item.prices || {},
+                    };
+                }
+            });
         });
-      });
     }
 
     const existingList = await getShoppingList();
     const newList: ShoppingItem[] = [];
 
     for (const data of Object.values(aggregatedItems)) {
-      if(data.quantityInGrams === 0) continue;
-      
-      const useKg = data.quantityInGrams >= 1000;
-      const finalQuantity = useKg ? data.quantityInGrams / 1000 : data.quantityInGrams;
-      const finalUnit = useKg ? 'kg' : 'g';
+        if(data.quantityInGrams === 0) continue;
+        
+        const useKg = data.quantityInGrams >= 1000;
+        const finalQuantity = useKg ? data.quantityInGrams / 1000 : data.quantityInGrams;
+        const finalUnit = useKg ? 'kg' : 'g';
 
-      // Use the normalized name to create the ID
-      const sanitizedId = data.name.trim().toLowerCase().replace(/[.#$[\]]/g, '_');
-      const existingItem = existingList.find(i => i.id === sanitizedId);
-      
-      const newItem: ShoppingItem = {
-        id: sanitizedId,
-        // Capitalize the first letter for display
-        name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
-        quantity: parseFloat(finalQuantity.toFixed(2)),
-        unit: finalUnit,
-        prices: existingItem?.prices || data.prices || {},
-        freshness: existingItem?.freshness || 'green',
-        isHighlighted: existingItem?.isHighlighted || false,
-      };
-      newList.push(newItem);
+        const sanitizedId = data.name.trim().toLowerCase().replace(/[.#$[\]]/g, '_');
+        const existingItem = existingList.find(i => i.id === sanitizedId);
+        
+        const newItem: ShoppingItem = {
+            id: sanitizedId,
+            name: data.name.charAt(0).toUpperCase() + data.name.slice(1),
+            quantity: parseFloat(finalQuantity.toFixed(2)),
+            unit: finalUnit,
+            prices: existingItem?.prices || data.prices || {},
+            freshness: existingItem?.freshness || 'green',
+            isHighlighted: existingItem?.isHighlighted || false,
+        };
+        newList.push(newItem);
     }
     
     await batchUpdateShoppingList(newList);
     setShoppingList(newList);
-  }, []);
+}, []);
 
 
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
@@ -160,8 +155,9 @@ export default function Home() {
   const handleSaveDiet = async (profileId: string, newDiet: DietPlan) => {
     setLoading(true);
     await updateDietPlan(profileId, newDiet);
+    setActiveProfileId(profileId);
     
-    if (profileId === DEFAULT_PROFILE_ID) {
+    if (profileId === activeProfileId) {
       setDiet(newDiet);
     }
     
@@ -177,6 +173,7 @@ export default function Home() {
     await deleteProfile(profileId);
     const allProfiles = await getAllDietPlans();
     await updateShoppingList(allProfiles);
+    setActiveProfileId(DEFAULT_PROFILE_ID);
     setLoading(false);
   };
 
@@ -283,7 +280,8 @@ export default function Home() {
                 onOpenChange={setIsSheetOpen}
                 onSave={handleSaveDiet}
                 onDeleteProfile={handleDeleteProfile}
-                initialProfileId={DEFAULT_PROFILE_ID}
+                profileId={activeProfileId}
+                onProfileChange={setActiveProfileId}
               />}
               <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
@@ -352,5 +350,3 @@ export default function Home() {
     </ThemeProvider>
   );
 }
-
-    

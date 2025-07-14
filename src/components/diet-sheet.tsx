@@ -47,7 +47,8 @@ interface DietSheetProps {
   onOpenChange: (open: boolean) => void;
   onSave: (profileId: string, diet: DietPlan) => void;
   onDeleteProfile: (profileId: string) => void;
-  initialProfileId: string;
+  profileId: string;
+  onProfileChange: (profileId: string) => void;
 }
 
 const WEEK_DAYS: { key: keyof WeekPlan; label: string }[] = [
@@ -67,8 +68,7 @@ const MEALS: { key: MealType, label: string, icon: React.FC<React.SVGProps<SVGSV
 ];
 
 
-export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initialProfileId }: DietSheetProps) {
-  const [currentProfileId, setCurrentProfileId] = useState(initialProfileId);
+export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, profileId, onProfileChange }: DietSheetProps) {
   const [profileIds, setProfileIds] = useState<string[]>([]);
   const [newProfileName, setNewProfileName] = useState("");
 
@@ -77,15 +77,15 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
 
   const fetchProfiles = useCallback(async () => {
     const ids = await getProfileIds();
-    if (!ids.includes(initialProfileId)) {
-        ids.unshift(initialProfileId);
+    if (!ids.includes(profileId)) {
+        ids.unshift(profileId);
     }
     setProfileIds(ids);
-  }, [initialProfileId]);
+  }, [profileId]);
 
-  const fetchDiet = useCallback(async (profileId: string) => {
+  const fetchDiet = useCallback(async (id: string) => {
     setLoading(true);
-    const dietData = await getDietPlan(profileId);
+    const dietData = await getDietPlan(id);
     setDiet(dietData);
     setLoading(false);
   }, []);
@@ -93,13 +93,13 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
   useEffect(() => {
     if (open) {
       fetchProfiles();
-      fetchDiet(currentProfileId);
+      fetchDiet(profileId);
     }
-  }, [open, currentProfileId, fetchDiet, fetchProfiles]);
+  }, [open, profileId, fetchDiet, fetchProfiles]);
 
-  const handleProfileChange = (profileId: string) => {
-    if (profileId) {
-        setCurrentProfileId(profileId);
+  const handleProfileChange = (newProfileId: string) => {
+    if (newProfileId) {
+        onProfileChange(newProfileId);
     }
   };
 
@@ -107,25 +107,26 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
     if (newProfileName.trim() && !profileIds.includes(newProfileName.trim())) {
       const newId = newProfileName.trim();
       setProfileIds(prev => [...prev, newId]);
-      setCurrentProfileId(newId);
+      onProfileChange(newId);
       setNewProfileName("");
     }
   };
 
   const handleDeleteConfirmed = async () => {
-    if (currentProfileId === initialProfileId) return;
+    if (profileId === 'principale') return;
     
-    await onDeleteProfile(currentProfileId);
+    await onDeleteProfile(profileId);
     
-    const newProfileIds = profileIds.filter(id => id !== currentProfileId);
+    const newProfileIds = profileIds.filter(id => id !== profileId);
     setProfileIds(newProfileIds);
-    setCurrentProfileId(initialProfileId);
+    // Switch back to the default profile
+    onProfileChange('principale');
   }
 
 
   const handleSave = () => {
     if (diet) {
-      onSave(currentProfileId, diet);
+      onSave(profileId, diet);
     }
   };
   
@@ -237,7 +238,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
                        <div className="space-y-2">
                           <label className="text-sm font-medium">Seleziona Profilo</label>
                           <div className="flex gap-2 items-center">
-                           <Select value={currentProfileId} onValueChange={handleProfileChange}>
+                           <Select value={profileId} onValueChange={handleProfileChange}>
                              <SelectTrigger>
                                <SelectValue placeholder="Scegli un profilo..." />
                              </SelectTrigger>
@@ -251,7 +252,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
                            </Select>
                            <AlertDialog>
                               <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="icon" disabled={currentProfileId === initialProfileId}>
+                                <Button variant="destructive" size="icon" disabled={profileId === 'principale'}>
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                               </AlertDialogTrigger>
@@ -259,7 +260,7 @@ export function DietSheet({ open, onOpenChange, onSave, onDeleteProfile, initial
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Sei sicuro di voler eliminare questo profilo?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Questa azione non può essere annullata. Il profilo "<strong>{currentProfileId}</strong>" e tutti i suoi dati verranno eliminati permanentemente.
+                                    Questa azione non può essere annullata. Il profilo "<strong>{profileId}</strong>" e tutti i suoi dati verranno eliminati permanentemente.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
