@@ -66,7 +66,7 @@ export default function Home() {
   }, [isClient, fetchInitialData]);
 
   const updateShoppingList = useCallback(async (allProfiles: Profiles) => {
-    const aggregatedItems: { [key: string]: { name: string; quantity: number; unit: string; prices: Partial<Record<Store, number>> } } = {};
+    const aggregatedItems: { [key: string]: { name: string; quantityInGrams: number; prices: Partial<Record<Store, number>> } } = {};
 
     Object.values(allProfiles).forEach(currentDiet => {
       if (!currentDiet || !currentDiet.dayTypes) return;
@@ -86,26 +86,24 @@ export default function Home() {
         ];
         if (meals.length === 0) return;
 
+        const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
+        const isDayTypeUsed = usageMultiplier > 0;
+
         meals.forEach(item => {
-          if (!item.name) return;
-          const key = item.name.toLowerCase();
-          const usageCount = dayTypeUsageCount[dayType.id] || 0;
-          const baseQuantity = item.quantity || 0;
+          if (!item.name || item.quantity <= 0) return;
           
-          let effectiveQuantity = 0;
-          if (usageCount > 0) {
-            effectiveQuantity = baseQuantity * usageCount;
-          } else {
-            effectiveQuantity = baseQuantity;
-          }
+          const key = item.name.toLowerCase();
+          const baseQuantity = item.quantity || 0;
+          const quantityInGrams = item.unit === 'kg' ? baseQuantity * 1000 : baseQuantity;
+          
+          const effectiveQuantity = isDayTypeUsed ? (quantityInGrams * usageMultiplier) : quantityInGrams;
 
           if (aggregatedItems[key]) {
-            aggregatedItems[key].quantity += effectiveQuantity;
+            aggregatedItems[key].quantityInGrams += effectiveQuantity;
           } else {
             aggregatedItems[key] = {
               name: item.name,
-              quantity: effectiveQuantity,
-              unit: item.unit || 'g',
+              quantityInGrams: effectiveQuantity,
               prices: item.prices || {},
             };
           }
@@ -117,10 +115,12 @@ export default function Home() {
     const newList: ShoppingItem[] = [];
 
     for (const data of Object.values(aggregatedItems)) {
-      if(data.quantity === 0) continue;
+      if(data.quantityInGrams === 0) continue;
       
-      const finalQuantity = data.quantity >= 1000 ? data.quantity / 1000 : data.quantity;
-      const finalUnit = data.quantity >= 1000 ? 'kg' : 'g';
+      const useKg = data.quantityInGrams >= 1000;
+      const finalQuantity = useKg ? data.quantityInGrams / 1000 : data.quantityInGrams;
+      const finalUnit = useKg ? 'kg' : 'g';
+
       const sanitizedId = data.name.replace(/[.#$[\]]/g, '_').toLowerCase();
       const existingItem = existingList.find(i => i.id === sanitizedId);
       
