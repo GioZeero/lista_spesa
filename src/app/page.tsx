@@ -17,13 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDietPlan, getShoppingList, updateDietPlan, updateShoppingItem, getAllDietPlans, batchUpdateShoppingList, deleteProfile } from "@/lib/firebase";
-import { ThemeProvider } from "@/components/theme-provider";
 
 
 const DEFAULT_PROFILE_ID = 'principale';
 
 export default function Home() {
-  const [diet, setDiet] = useState<DietPlan | null>(null);
+  const [profiles, setProfiles] = useState<Profiles | null>(null);
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([]);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,34 +37,6 @@ export default function Home() {
     setIsClient(true);
   }, []);
   
-  const fetchInitialData = useCallback(async () => {
-    setLoading(true);
-    setFirebaseError(null);
-    try {
-      const dietData = await getDietPlan(activeProfileId);
-      const shoppingListData = await getShoppingList();
-      
-      setDiet(dietData);
-      setShoppingList(shoppingListData);
-
-    } catch (error: any) {
-      console.error("Error fetching data from Firebase:", error);
-      if (error.message.includes("FIREBASE FATAL ERROR")) {
-        setFirebaseError(error.message);
-      } else {
-        setFirebaseError("An unknown error occurred while connecting to the database.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [activeProfileId]);
-
-  useEffect(() => {
-    if (isClient) {
-      fetchInitialData();
-    }
-  }, [isClient, fetchInitialData]);
-
   const updateShoppingList = useCallback(async (allProfiles: Profiles) => {
     const aggregatedItems: { [key: string]: { name: string; quantityInGrams: number; prices: Partial<Record<Store, number>> } } = {};
 
@@ -81,6 +52,9 @@ export default function Home() {
         }
         
         currentDiet.dayTypes.forEach(dayType => {
+            // Se un dayType non è usato nella settimana, lo contiamo una volta.
+            // Se è usato, viene già contato da dayTypeUsageCount.
+            // Se non è usato e non vogliamo includerlo, si può commentare questa linea.
             const usageMultiplier = dayTypeUsageCount[dayType.id] || 0;
             if (usageMultiplier === 0) return;
 
@@ -143,6 +117,41 @@ export default function Home() {
 }, []);
 
 
+ const fetchInitialData = useCallback(async () => {
+    setLoading(true);
+    setFirebaseError(null);
+    try {
+      const [profilesData, shoppingListData] = await Promise.all([
+        getAllDietPlans(),
+        getShoppingList()
+      ]);
+      
+      setProfiles(profilesData);
+      setShoppingList(shoppingListData);
+
+      if (Object.keys(profilesData).length > 0) {
+        await updateShoppingList(profilesData);
+      }
+
+    } catch (error: any) {
+      console.error("Error fetching data from Firebase:", error);
+      if (error.message.includes("FIREBASE FATAL ERROR")) {
+        setFirebaseError(error.message);
+      } else {
+        setFirebaseError("An unknown error occurred while connecting to the database.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [updateShoppingList]);
+
+
+  useEffect(() => {
+    if (isClient) {
+      fetchInitialData();
+    }
+  }, [isClient, fetchInitialData]);
+
   const handleUpdateItem = async (updatedItem: ShoppingItem) => {
     setShoppingList((prevItems) =>
       prevItems.map((item) =>
@@ -157,12 +166,13 @@ export default function Home() {
     await updateDietPlan(profileId, newDiet);
     setActiveProfileId(profileId);
     
-    if (profileId === activeProfileId) {
-      setDiet(newDiet);
-    }
+    const updatedProfiles = {
+      ...profiles,
+      [profileId]: newDiet,
+    };
+    setProfiles(updatedProfiles as Profiles);
     
-    const allProfiles = await getAllDietPlans();
-    await updateShoppingList(allProfiles);
+    await updateShoppingList(updatedProfiles as Profiles);
     
     setIsSheetOpen(false);
     setLoading(false);
@@ -171,9 +181,16 @@ export default function Home() {
   const handleDeleteProfile = async (profileId: string) => {
     setLoading(true);
     await deleteProfile(profileId);
-    const allProfiles = await getAllDietPlans();
-    await updateShoppingList(allProfiles);
-    setActiveProfileId(DEFAULT_PROFILE_ID);
+    
+    const newProfiles = { ...profiles };
+    delete newProfiles[profileId];
+    setProfiles(newProfiles);
+    
+    await updateShoppingList(newProfiles);
+    
+    // Switch to default profile after deletion
+    setActiveProfileId(DEFAULT_PROFILE_ID); 
+    
     setLoading(false);
   };
 
@@ -233,120 +250,114 @@ export default function Home() {
   }
 
   return (
-    <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-      <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <ShoppingCart className="h-7 w-7 text-primary" />
-              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                ShopSmart
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setIsSheetOpen(true)} className="group" disabled={loading}>
-                  Gestisci Dieta
-                  <NotebookPen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
-              </Button>
-              <ModeToggle />
-            </div>
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
+      <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <ShoppingCart className="h-7 w-7 text-primary" />
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+              ShopSmart
+            </h1>
           </div>
-        </header>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setIsSheetOpen(true)} className="group" disabled={loading}>
+                Gestisci Dieta
+                <NotebookPen className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+            </Button>
+            <ModeToggle />
+          </div>
+        </div>
+      </header>
 
-        <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
-          {firebaseError ? (
-              <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
-                    <h2 className="text-2xl font-bold text-destructive mb-4">Errore di Configurazione Firebase</h2>
-                    <p className="text-muted-foreground mb-6">{firebaseError}</p>
-                    <p className="text-sm text-muted-foreground">
-                        Assicurati di aver impostato correttamente le variabili d'ambiente nel file <code className="bg-muted px-1 py-0.5 rounded">.env</code>, in particolare <code className="bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_FIREBASE_DATABASE_URL</code>.
-                    </p>
-              </div>
-          ) : loading ? (
-              <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
-                  <Loader2 className="h-16 w-16 animate-spin text-primary" />
-                  <h3 className="text-xl font-semibold">Caricamento dati...</h3>
-                  <p className="max-w-xs">Recupero del tuo piano spesa da Firebase.</p>
-              </div>
-          ) : (
-            <>
-              {diet && <DietSheet
-                open={isSheetOpen}
-                onOpenChange={setIsSheetOpen}
-                onSave={handleSaveDiet}
-                onDeleteProfile={handleDeleteProfile}
-                profileId={activeProfileId}
-                onProfileChange={setActiveProfileId}
-              />}
-              <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-                <div>
-                  <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Globale</h2>
-                  <p className="text-muted-foreground">Articoli da tutti i profili per una spesa efficiente.</p>
-                </div>
-              </div>
-              
-              <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <div className="relative lg:col-span-3">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      placeholder="Cerca alimento..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-full"
-                    />
-                  </div>
-                  <div className="lg:col-span-2">
-                    <Select value={sortOrder} onValueChange={setSortOrder}>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Ordina per..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="default">Da comprare</SelectItem>
-                        <SelectItem value="alphabetical">Alfabetico (A-Z)</SelectItem>
-                        <SelectItem value="freshness">Livello di scadenza</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-              </div>
-
-              {filteredAndSortedList.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredAndSortedList.map((item) => (
-                    <ShoppingListItemCard
-                      key={item.id}
-                      item={item}
-                      onUpdate={handleUpdateItem}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
-                  <Utensils className="h-16 w-16 text-muted-foreground/50" />
-                  <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
-                  <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
-                </div>
-              )}
-            </>
-          )}
-        </main>
-
-        <footer className="sticky bottom-0 mt-auto w-full border-t border-border/40 bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
-              <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
-                  <span>Costo Totale Stimato:</span>
-                  <span>€{totalCost}</span>
-              </div>
-              <p className="text-center text-sm text-muted-foreground">
-                  {year && <span>© {year} ShopSmart. Tutti i diritti riservati.</span>}
-              </p>
+      <main className="container mx-auto max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+        {firebaseError ? (
+            <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
+                  <h2 className="text-2xl font-bold text-destructive mb-4">Errore di Configurazione Firebase</h2>
+                  <p className="text-muted-foreground mb-6">{firebaseError}</p>
+                  <p className="text-sm text-muted-foreground">
+                      Assicurati di aver impostato correttamente le variabili d'ambiente nel file <code className="bg-muted px-1 py-0.5 rounded">.env</code>, in particolare <code className="bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_FIREBASE_DATABASE_URL</code>.
+                  </p>
             </div>
-        </footer>
-      </div>
-    </ThemeProvider>
+        ) : loading ? (
+            <div className="mt-16 flex flex-col items-center gap-4 text-center text-muted-foreground">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+                <h3 className="text-xl font-semibold">Caricamento dati...</h3>
+                <p className="max-w-xs">Recupero del tuo piano spesa da Firebase.</p>
+            </div>
+        ) : (
+          <>
+            {profiles && <DietSheet
+              open={isSheetOpen}
+              onOpenChange={setIsSheetOpen}
+              onSave={handleSaveDiet}
+              onDeleteProfile={handleDeleteProfile}
+              initialProfileId={activeProfileId}
+              onProfileChange={setActiveProfileId}
+              profiles={profiles}
+            />}
+            <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-2xl font-bold text-card-foreground">Lista della Spesa Globale</h2>
+                <p className="text-muted-foreground">Articoli da tutti i profili per una spesa efficiente.</p>
+              </div>
+            </div>
+            
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="relative lg:col-span-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca alimento..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-full"
+                  />
+                </div>
+                <div className="lg:col-span-2">
+                  <Select value={sortOrder} onValueChange={setSortOrder}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Ordina per..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Da comprare</SelectItem>
+                      <SelectItem value="alphabetical">Alfabetico (A-Z)</SelectItem>
+                      <SelectItem value="freshness">Livello di scadenza</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+            </div>
+
+            {filteredAndSortedList.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {filteredAndSortedList.map((item) => (
+                  <ShoppingListItemCard
+                    key={item.id}
+                    item={item}
+                    onUpdate={handleUpdateItem}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-16 flex flex-col items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/30 py-16 text-center text-muted-foreground">
+                <Utensils className="h-16 w-16 text-muted-foreground/50" />
+                <h3 className="text-xl font-semibold">Nessun Articolo Trovato</h3>
+                <p className="max-w-xs">La tua lista della spesa è vuota o non è stata ancora generata. Clicca su "Gestisci Dieta" per iniziare.</p>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      <footer className="sticky bottom-0 mt-auto w-full border-t border-border/40 bg-background/95 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
+            <div className="flex items-baseline gap-2 rounded-full bg-primary/10 px-4 py-2 text-lg font-bold text-primary">
+                <span>Costo Totale Stimato:</span>
+                <span>€{totalCost}</span>
+            </div>
+            <p className="text-center text-sm text-muted-foreground">
+                {year && <span>© {year} ShopSmart. Tutti i diritti riservati.</span>}
+            </p>
+          </div>
+      </footer>
+    </div>
   );
 }

@@ -88,7 +88,21 @@ export const getAllDietPlans = async (): Promise<Profiles> => {
     const profilesRef = ref(db, DIET_PLANS_ROOT);
     const snapshot = await get(profilesRef);
     if (snapshot.exists()) {
-        return snapshot.val() as Profiles;
+        const profiles = snapshot.val() as Profiles;
+        // Ensure every profile has a valid structure
+        Object.keys(profiles).forEach(profileId => {
+            const plan = profiles[profileId];
+            profiles[profileId] = {
+                dayTypes: plan.dayTypes || [],
+                week: plan.week || { ...defaultWeek }
+            };
+            profiles[profileId].dayTypes.forEach(dt => {
+                dt.breakfast = dt.breakfast || [];
+                dt.lunch = dt.lunch || [];
+                dt.dinner = dt.dinner || [];
+            });
+        });
+        return profiles;
     }
     return {};
 }
@@ -96,7 +110,9 @@ export const getAllDietPlans = async (): Promise<Profiles> => {
 export const updateDietPlan = async (profileId: string, dietPlan: DietPlan): Promise<void> => {
     const db = getDb();
     const dietPlanRef = ref(db, `${DIET_PLANS_ROOT}/${profileId}`);
-    await set(dietPlanRef, dietPlan);
+    // Sanitize diet plan before saving to remove any undefined values from JSON
+    const sanitizedPlan = JSON.parse(JSON.stringify(dietPlan));
+    await set(dietPlanRef, sanitizedPlan);
 };
 
 export const deleteProfile = async (profileId: string): Promise<void> => {
@@ -124,10 +140,9 @@ export const getShoppingList = async (): Promise<ShoppingItem[]> => {
 
 export const updateShoppingItem = async (item: ShoppingItem): Promise<void> => {
     const db = getDb();
-    // Using item id as the key in the JSON tree. Sanitize the ID to be Firebase-key-friendly.
-    const sanitizedId = item.id.replace(/[.#$[\]]/g, '_').toLowerCase();
-    const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${sanitizedId}`);
-    await set(itemRef, { ...item, id: sanitizedId });
+    // Using item id as the key in the JSON tree.
+    const itemRef = ref(db, `${SHOPPING_LIST_PATH}/${item.id}`);
+    await set(itemRef, item);
 };
 
 export const deleteShoppingItem = async (itemId: string): Promise<void> => {
@@ -141,41 +156,32 @@ export const batchUpdateShoppingList = async (items: ShoppingItem[]): Promise<vo
     const db = getDb();
     const dbRef = ref(db);
     
-    // 1. Get current shopping list from DB
     const existingListSnapshot = await get(ref(db, SHOPPING_LIST_PATH));
     const existingList: Record<string, ShoppingItem> = existingListSnapshot.val() || {};
     
-    // 2. Prepare the new list and track IDs
     const newItemsMap: Record<string, ShoppingItem> = {};
     items.forEach(item => {
-        const sanitizedId = item.id.replace(/[.#$[\]]/g, '_').toLowerCase();
-        newItemsMap[sanitizedId] = { ...item, id: sanitizedId };
+        newItemsMap[item.id] = item;
     });
 
     const existingIds = Object.keys(existingList);
     const newIds = Object.keys(newItemsMap);
 
-    // 3. Prepare batch updates
     const updates: { [key: string]: ShoppingItem | null } = {};
 
-    // 3a. Add/update items
     for (const id of newIds) {
-        // Add or update if the item is new or different from the existing one
-        // This avoids unnecessary writes for items that haven't changed (e.g., prices, freshness)
         updates[`${SHOPPING_LIST_PATH}/${id}`] = {
-            ...(existingList[id] || {}), // Preserve existing data like prices/freshness
-            ...newItemsMap[id],          // Overwrite with new data like quantity/unit
+            ...(existingList[id] || {}),
+            ...newItemsMap[id],          
         };
     }
 
-    // 3b. Remove items that are no longer in the diet plans
     for (const id of existingIds) {
         if (!newItemsMap[id]) {
-            updates[`${SHOPPING_LIST_PATH}/${id}`] = null; // Mark for deletion
+            updates[`${SHOPPING_LIST_PATH}/${id}`] = null;
         }
     }
 
-    // 4. Execute the atomic batch update
     if (Object.keys(updates).length > 0) {
         await update(dbRef, updates);
     }
